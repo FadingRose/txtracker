@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"txtracker/pkg/compiler"
 	"txtracker/pkg/filehandler"
 )
 
@@ -11,10 +11,15 @@ func main() {
 		panic(err)
 	}
 
-	contracts, err := filehandler.GetContractList()
-	fmt.Println(contracts)
-	if err != nil {
-		panic(err)
+	// To AST
+	compiler := compiler.NewSolidityCompiler()
+	solFilePaths := filehandler.GetContractSolPathList()
+	for _, path := range solFilePaths {
+		err := compiler.SolidityToAST_JSON(path)
+		if err != nil {
+			panic(err)
+		}
+
 	}
 
 }
