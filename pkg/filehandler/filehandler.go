@@ -13,7 +13,7 @@ import (
 
 type FileHandler interface {
 	GetContractList() ([]string, error)
-	GetContractData(contractName string) (string, error)
+	GetContractData(contractName string) (models.SoliditySourceCode, models.EVMByteCode, error)
 }
 
 type SolidityFileHandler struct {
@@ -21,16 +21,19 @@ type SolidityFileHandler struct {
 	contracts []models.Contract
 }
 
-func NewSolidityFileHandler(dataPath string) *SolidityFileHandler {
+// loadContracts replaces the init function and is called within the constructor
+
+func NewFileHandler(dataPath string) (FileHandler, error) {
 	handler := &SolidityFileHandler{
 		DataPath: dataPath,
 	}
-	handler.loadContracts()
-	return handler
+	if err := handler.loadContracts(); err != nil {
+		return nil, err
+	}
+	return handler, nil
 }
 
-// loadContracts replaces the init function and is called within the constructor
-func (s *SolidityFileHandler) loadContracts() {
+func (s *SolidityFileHandler) loadContracts() error {
 	err := filepath.Walk(s.DataPath, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			fileName, fileExtension := filepath.Base(path), filepath.Ext(path)
@@ -60,6 +63,7 @@ func (s *SolidityFileHandler) loadContracts() {
 	if err != nil {
 		logger.Fatal.Println("Error reading contract files:", err)
 	}
+	return err
 }
 
 // readThenDumpFileContent modified to return the file content directly

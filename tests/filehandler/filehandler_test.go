@@ -27,7 +27,7 @@ func TestSolidityFileHandler_GetContractList(t *testing.T) {
 	cleanup, DataPath := setupTestEnvironment()
 	defer cleanup()
 
-	handler := filehandler.NewSolidityFileHandler(DataPath)
+	handler, err := filehandler.NewFileHandler(DataPath)
 	contractList, err := handler.GetContractList()
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -44,7 +44,10 @@ func TestSolidityFileHandler_GetContractData(t *testing.T) {
 	cleanup, DataPath := setupTestEnvironment()
 	defer cleanup()
 
-	handler := filehandler.NewSolidityFileHandler(DataPath)
+	handler, err := filehandler.NewFileHandler(DataPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
 	contractName := []string{"TestContract1", "TestContract2"}
 
 	var solResults []string
