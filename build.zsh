@@ -1,5 +1,5 @@
 #!/bin/zsh
-chmod +x build.zsh
+
 
 set -e
 
@@ -11,7 +11,7 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
 echo "Running automated tests..."
-go test ./...
+go test -count=1 ./tests/...
 
 echo "Building the project..."
 go build -o "${BUILD_DIR}/${EXECUTABLE_NAME}" ./cmd/txtracker
