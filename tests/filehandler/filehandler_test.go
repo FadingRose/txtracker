@@ -70,3 +70,21 @@ func TestSolidityFileHandler_GetContractData(t *testing.T) {
 		t.Errorf("Expected contract data for %s, got %s", evm_expected, evmResults)
 	}
 }
+
+func TestSolidityFileHandler_GetContractSolPathList(t *testing.T) {
+	// Assume setupTestEnvironment has been called in a test suite setup if needed
+	cleanup, DataPath := setupTestEnvironment()
+	defer cleanup()
+
+	handler, err := filehandler.NewFileHandler(DataPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	contractPathList := handler.GetContractSolPathList()
+
+	expected := []string{filepath.Join(DataPath, "TestContract1.sol"), filepath.Join(DataPath, "TestContract2.sol")}
+	if !reflect.DeepEqual(contractPathList, expected) {
+		t.Errorf("Expected contract path list to be %v, got %v", expected, contractPathList)
+	}
+}

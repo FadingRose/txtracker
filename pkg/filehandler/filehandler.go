@@ -13,7 +13,9 @@ import (
 
 type FileHandler interface {
 	GetContractList() ([]string, error)
+	GetContractSolPathList() []string
 	GetContractData(contractName string) (models.SoliditySourceCode, models.EVMByteCode, error)
+	WriteASTFile(contractName string, data string) error
 }
 
 type SolidityFileHandler struct {
@@ -92,4 +94,18 @@ func (s SolidityFileHandler) GetContractData(contractName string) (models.Solidi
 		}
 	}
 	return "", "", nil // Consider returning an error if the contract is not found
+}
+
+func (s SolidityFileHandler) GetContractSolPathList() []string {
+	var contractPathList []string
+	for _, contract := range s.contracts {
+		contractPathList = append(contractPathList,
+			filepath.Join(s.DataPath, contract.ContractName+".sol"))
+	}
+	return contractPathList
+}
+
+func (s SolidityFileHandler) WriteASTFile(contractName string, data string) error {
+
+	return nil
 }
