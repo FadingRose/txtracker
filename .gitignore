@@ -3,3 +3,4 @@ build/bin/txtracker
 venv/
 *.sol
 *.json
+*.code-workspace
