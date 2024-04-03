@@ -49,7 +49,7 @@ func (s *SolidityFileHandler) loadContracts() error {
 			case ".evm":
 				evmCode = readThenDumpFileContent(path)
 			default:
-				logger.Fatal.Println("Unknown file extension:", fileExtension)
+				logger.Warning.Println("Unknown file extension:", fileExtension)
 			}
 
 			s.contracts = append(s.contracts,
