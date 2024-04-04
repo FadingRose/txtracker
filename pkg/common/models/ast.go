@@ -2,8 +2,6 @@ package models
 
 import (
 	"fmt"
-	"reflect"
-	"txtracker/pkg/logger"
 )
 
 type ASTNode interface {
@@ -44,42 +42,13 @@ func (c *Common) Instace() *Common {
 	return c
 }
 
-// Constructor------------------------------------------------------
-func Reflect_constructor(dest *ASTNode, data *map[string]interface{}) {
-	v := reflect.ValueOf(&dest).Elem()
-	if v.Kind() != reflect.Ptr || v.IsNil() {
-		logger.Fatal.Fatalf("Not a pointer: %v", v.Kind())
-		panic("Reflect failed: not a pointer")
-	}
-
-	v = v.Elem() // &
-
-	t := v.Type().String()
-	fmt.Println("Type:", t)
-
-	// t := v.Type()
-	// for i := 0; i < t.NumField(); i++ {
-	// 	jsonTag := t.Field(i).Tag.Get("json")
-
-	// 	if value, ok := (*data)[jsonTag]; ok {
-	// 		fieldValue := v.Field(i)
-	// 		if fieldValue.IsValid() && fieldValue.CanSet() {
-	// 			switch fieldValue.Kind() {
-	// 			case reflect.String:
-	// 				fieldValue.SetString(value.(string))
-	// 			case reflect.Map:
-	// 				fieldValue.Set(reflect.ValueOf(value))
-	// 			}
-	// 		}
-	// 	}
-	// }
-}
+// Constructors------------------------------------------------------
 
 // Top-level node for a .sol file
 type SourceUnit struct {
 	Common
 	AbsolutePath    string         `json:"absolutePath"`
-	ExportedSymbols map[string]int `json:"exportedSymbols"`
+	ExportedSymbols map[string]int `json:"exportedSymbols"` // 'symboleName': 'nodeId
 }
 
 func (s *SourceUnit) Attributes() map[string]interface{} {
@@ -87,6 +56,22 @@ func (s *SourceUnit) Attributes() map[string]interface{} {
 		"AbsolutePath":    s.AbsolutePath,
 		"ExportedSymbols": s.ExportedSymbols,
 	}
+}
+
+func (s *SourceUnit) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["absolutePath"]; ok {
+		s.AbsolutePath = value.(string)
+	}
+	if value, ok := (*data)["exportedSymbols"]; ok {
+		var res = make(map[string]int)
+		value := value.(map[string]interface{})
+		for key, val := range value {
+			v := val.([]interface{})[0].(float64)
+			res[key] = int(v)
+		}
+		s.ExportedSymbols = res
+	}
+
 }
 
 // ----------------------------------------------------------------------------
@@ -102,6 +87,16 @@ func (p *PragmaDirective) Attributes() map[string]interface{} {
 	}
 }
 
+func (p *PragmaDirective) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["literals"]; ok {
+		var res = make([]string, 0)
+		for _, v := range value.([]interface{}) {
+			res = append(res, v.(string))
+		}
+		p.Literals = res
+	}
+}
+
 // ----------------------------------------------------------------------------
 // ContractDefinition
 type ContractDefinition struct {
@@ -109,8 +104,7 @@ type ContractDefinition struct {
 	Name                     string                 `json:"name"`
 	BaseContracts            []InheritanceSpecifier `json:"baseContracts"` //?
 	ContractDependenceies    []string               `json:"contractDependencies"`
-	LinearizaedBaseContracts []string               `json:"linearizedBaseContracts"`
-	SubNodes                 []Common               `json:"nodes"` //?
+	LinearizaedBaseContracts []int                  `json:"linearizedBaseContracts"`
 	ContractKind             string                 `json:"contractKind"`
 }
 
@@ -120,8 +114,41 @@ func (c *ContractDefinition) Attributes() map[string]interface{} {
 		"BaseContracts":            c.BaseContracts,
 		"ContractDependenceies":    c.ContractDependenceies,
 		"LinearizaedBaseContracts": c.LinearizaedBaseContracts,
-		"SubNodes":                 c.SubNodes,
 		"ContractKind":             c.ContractKind,
+	}
+}
+
+// TODO : Test the `baseContracts` is NOT empty
+func (c *ContractDefinition) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["name"]; ok {
+		c.Name = value.(string)
+	}
+	if value, ok := (*data)["baseContracts"]; ok {
+		if len(value.([]interface{})) == 0 {
+			c.BaseContracts = make([]InheritanceSpecifier, 0)
+		} else {
+			c.BaseContracts = value.([]InheritanceSpecifier) //WARNING
+		}
+
+	}
+	if value, ok := (*data)["contractDependencies"]; ok {
+		if len(value.([]interface{})) == 0 {
+			c.ContractDependenceies = make([]string, 0)
+		} else {
+			c.ContractDependenceies = value.([]string)
+		}
+
+	}
+	if value, ok := (*data)["linearizedBaseContracts"]; ok {
+		var res = make([]int, 0)
+		for _, v := range value.([]interface{}) {
+			v := v.(float64)
+			res = append(res, (int)(v))
+		}
+		c.LinearizaedBaseContracts = res
+	}
+	if value, ok := (*data)["contractKind"]; ok {
+		c.ContractKind = value.(string)
 	}
 }
 
@@ -135,6 +162,12 @@ type Block struct {
 func (b *Block) Attributes() map[string]interface{} {
 	return map[string]interface{}{
 		"Statements": b.Statements,
+	}
+}
+
+func (b *Block) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["statements"]; ok {
+		b.Statements = value.([]ExpressionStatement)
 	}
 }
 
@@ -157,6 +190,21 @@ func (i *Identifier) Attributes() map[string]interface{} {
 	}
 }
 
+func (i *Identifier) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		i.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["overloadedDeclarations"]; ok {
+		i.OverloadedDeclarations = value.([]string)
+	}
+	if value, ok := (*data)["referencedDeclaration"]; ok {
+		i.ReferencedDeclaration = value.(int)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		i.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // TypeDescriptions node
 type TypeDescriptions struct {
@@ -169,6 +217,15 @@ func (t *TypeDescriptions) Attributes() map[string]interface{} {
 	return map[string]interface{}{
 		"TypeString":     t.TypeString,
 		"TypeIdentifier": t.TypeIdentifier,
+	}
+}
+
+func (t *TypeDescriptions) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["typeString"]; ok {
+		t.TypeString = value.(string)
+	}
+	if value, ok := (*data)["typeIdentifier"]; ok {
+		t.TypeIdentifier = value.(string)
 	}
 }
 
@@ -203,6 +260,39 @@ func (b *BinaryOperation) Attributes() map[string]interface{} {
 	}
 }
 
+func (b *BinaryOperation) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		b.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["commonType"]; ok {
+		b.CommonType = value.(TypeDescriptions)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		b.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		b.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		b.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		b.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["leftExpression"]; ok {
+		b.LeftExpression = value.(Common)
+	}
+	if value, ok := (*data)["operator"]; ok {
+		b.Operator = value.(string)
+	}
+	if value, ok := (*data)["rightExpression"]; ok {
+		b.RightExpression = value.(Common)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		b.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // Literal node
 type Literal struct {
@@ -234,6 +324,42 @@ func (l *Literal) Attributes() map[string]interface{} {
 	}
 }
 
+func (l *Literal) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		l.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["hexValue"]; ok {
+		l.HexValue = value.(string)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		l.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		l.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		l.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["kind"]; ok {
+		l.Kind = value.(string)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		l.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["subdenomination"]; ok {
+		l.Subdenomination = value.(string)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		value := value.(map[string]interface{})
+		var res TypeDescriptions
+		res.Constructor(&value)
+		l.TypeDescriptions = res
+	}
+	if value, ok := (*data)["value"]; ok {
+		l.Value = value.(string)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // IfStatement node
 type IfStatement struct {
@@ -248,6 +374,18 @@ func (i *IfStatement) Attributes() map[string]interface{} {
 		"Condition": i.Condition,
 		"FalseBody": i.FalseBody,
 		"TrueBody":  i.TrueBody,
+	}
+}
+
+func (i *IfStatement) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["condition"]; ok {
+		i.Condition = value.(BinaryOperation)
+	}
+	if value, ok := (*data)["falseBody"]; ok {
+		i.FalseBody = value.(Block)
+	}
+	if value, ok := (*data)["trueBody"]; ok {
+		i.TrueBody = value.(Block)
 	}
 }
 
@@ -266,6 +404,15 @@ func (r *Return) Attributes() map[string]interface{} {
 	}
 }
 
+func (r *Return) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["expression"]; ok {
+		r.Expression = value.(Common)
+	}
+	if value, ok := (*data)["functionReturnParameters"]; ok {
+		r.FunctionReturnParameters = value.(int)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // VariableDeclaration node
 type VariableDeclaration struct {
@@ -277,7 +424,7 @@ type VariableDeclaration struct {
 	StorageLocation  string             `json:"storageLocation"`
 	TypeDescriptions TypeDescriptions   `json:"typeDescriptions"`
 	TypeName         ElementaryTypeName `json:"typeName"`
-	Value            Common             `json:"value"`
+	Value            Literal            `json:"value"`
 	Visibility       string             `json:"visibility"`
 }
 
@@ -292,6 +439,45 @@ func (v *VariableDeclaration) Attributes() map[string]interface{} {
 		"TypeName":         v.TypeName,
 		"Value":            v.Value,
 		"Visibility":       v.Visibility,
+	}
+}
+
+func (v *VariableDeclaration) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["constant"]; ok {
+		v.Constant = value.(bool)
+	}
+	if value, ok := (*data)["name"]; ok {
+		v.Name = value.(string)
+	}
+	if value, ok := (*data)["scope"]; ok {
+		v.Scope = (int)(value.(float64))
+	}
+	if value, ok := (*data)["stateVariable"]; ok {
+		v.StateVariable = value.(bool)
+	}
+	if value, ok := (*data)["storageLocation"]; ok {
+		v.StorageLocation = value.(string)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		value := value.(map[string]interface{})
+		var res TypeDescriptions
+		res.Constructor(&value)
+		v.TypeDescriptions = res
+	}
+	if value, ok := (*data)["typeName"]; ok {
+		value := value.(map[string]interface{})
+		var res ElementaryTypeName
+		res.Constructor(&value)
+		v.TypeName = res
+	}
+	if value, ok := (*data)["value"]; ok {
+		value := value.(map[string]interface{})
+		var res Literal
+		res.Constructor(&value)
+		v.Value = res
+	}
+	if value, ok := (*data)["visibility"]; ok {
+		v.Visibility = value.(string)
 	}
 }
 
@@ -311,6 +497,18 @@ func (e *ElementaryTypeName) Attributes() map[string]interface{} {
 	}
 }
 
+func (e *ElementaryTypeName) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["name"]; ok {
+		e.Name = value.(string)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		value := value.(map[string]interface{})
+		var res TypeDescriptions
+		res.Constructor(&value)
+		e.TypeDescriptions = res
+	}
+}
+
 // ----------------------------------------------------------------------------
 // VariableDeclarationStatement node
 
@@ -318,7 +516,7 @@ type VariableDeclarationStatement struct {
 	Common
 	Assignments   []int                 `json:"assignments"`
 	Declarrations []VariableDeclaration `json:"declarations"`
-	InitialValue  Common                `json:"initialValue"`
+	InitialValue  *Common               `json:"initialValue"`
 }
 
 func (v *VariableDeclarationStatement) Attributes() map[string]interface{} {
@@ -329,13 +527,25 @@ func (v *VariableDeclarationStatement) Attributes() map[string]interface{} {
 	}
 }
 
+func (v *VariableDeclarationStatement) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["assignments"]; ok {
+		v.Assignments = value.([]int)
+	}
+	if value, ok := (*data)["declarations"]; ok {
+		v.Declarrations = value.([]VariableDeclaration)
+	}
+	if value, ok := (*data)["initialValue"]; ok {
+		v.InitialValue = value.(*Common)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // FunctionCall node
 type FunctionCall struct {
 	Common
 	ArgumentTypes    []string         `json:"argumentTypes"`
 	Arguments        []Common         `json:"arguments"`
-	Expression       Common           `json:"expression"`
+	Expression       *Common          `json:"expression"`
 	IsConstant       bool             `json:"isConstant"`
 	IsLValue         bool             `json:"isLValue"`
 	IsPure           bool             `json:"isPure"`
@@ -360,11 +570,44 @@ func (f *FunctionCall) Attributes() map[string]interface{} {
 	}
 }
 
+func (f *FunctionCall) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		f.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["arguments"]; ok {
+		f.Arguments = value.([]Common)
+	}
+	if value, ok := (*data)["expression"]; ok {
+		f.Expression = value.(*Common)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		f.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		f.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		f.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["kind"]; ok {
+		f.Kind = value.(string)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		f.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["names"]; ok {
+		f.Names = value.([]string)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		f.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // ExpressionStatement node
 type ExpressionStatement struct {
 	Common
-	Expression Common `json:"expression"`
+	Expression *Common `json:"expression"`
 }
 
 func (e *ExpressionStatement) Attributes() map[string]interface{} {
@@ -373,22 +616,28 @@ func (e *ExpressionStatement) Attributes() map[string]interface{} {
 	}
 }
 
+func (e *ExpressionStatement) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["expression"]; ok {
+		e.Expression = value.(*Common)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // FunctionDefinition node
 type FunctionDefinition struct {
 	Common
-	Implemented      bool          `json:"implemented"`
-	IsConstructor    bool          `json:"isConstructor"`
-	IsDeclaredConst  bool          `json:"isDeclaredConst"`
-	Modifiers        []Common      `json:"modifiers"`
-	Name             string        `json:"name"`
-	Parameters       ParameterList `json:"parameters"`
-	Payable          bool          `json:"payable"`
-	ReturnParameters ParameterList `json:"returnParameters"`
-	Scope            int           `json:"scope"`
-	StateMutability  string        `json:"stateMutability"`
-	SuperFunction    string        `json:"superFunction"`
-	Visibility       string        `json:"visibility"`
+	Implemented      bool                 `json:"implemented"`
+	IsConstructor    bool                 `json:"isConstructor"`
+	IsDeclaredConst  bool                 `json:"isDeclaredConst"`
+	Modifiers        []ModifierInvocation `json:"modifiers"`
+	Name             string               `json:"name"`
+	Parameters       ParameterList        `json:"parameters"`
+	Payable          bool                 `json:"payable"`
+	ReturnParameters ParameterList        `json:"returnParameters"`
+	Scope            int                  `json:"scope"`
+	StateMutability  string               `json:"stateMutability"`
+	SuperFunction    string               `json:"superFunction"`
+	Visibility       string               `json:"visibility"`
 }
 
 func (f *FunctionDefinition) Attributes() map[string]interface{} {
@@ -408,6 +657,56 @@ func (f *FunctionDefinition) Attributes() map[string]interface{} {
 	}
 }
 
+// TODO: Test Modifier is NOT empty
+func (f *FunctionDefinition) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["implemented"]; ok {
+		f.Implemented = value.(bool)
+	}
+	if value, ok := (*data)["isConstructor"]; ok {
+		f.IsConstructor = value.(bool)
+	}
+	if value, ok := (*data)["isDeclaredConst"]; ok {
+		f.IsDeclaredConst = value.(bool)
+	}
+	if value, ok := (*data)["modifiers"]; ok {
+		if len(value.([]interface{})) == 0 {
+			f.Modifiers = make([]ModifierInvocation, 0)
+		} else {
+		}
+	}
+	if value, ok := (*data)["name"]; ok {
+		f.Name = value.(string)
+	}
+	if value, ok := (*data)["parameters"]; ok {
+		value := value.(map[string]interface{})
+		var res ParameterList
+		res.Constructor(&value)
+		f.Parameters = res
+	}
+	if value, ok := (*data)["payable"]; ok {
+		f.Payable = value.(bool)
+	}
+	if value, ok := (*data)["returnParameters"]; ok {
+		value := value.(map[string]interface{})
+		var res ParameterList
+		res.Constructor(&value)
+		f.ReturnParameters = res
+	}
+	if value, ok := (*data)["scope"]; ok {
+		res := value.(float64)
+		f.Scope = (int)(res)
+	}
+	if value, ok := (*data)["stateMutability"]; ok {
+		f.StateMutability = value.(string)
+	}
+	if value, ok := (*data)["superFunction"]; ok {
+		f.SuperFunction = value.(string)
+	}
+	if value, ok := (*data)["visibility"]; ok {
+		f.Visibility = value.(string)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // ParameterList node
 type ParameterList struct {
@@ -418,6 +717,17 @@ type ParameterList struct {
 func (p *ParameterList) Attributes() map[string]interface{} {
 	return map[string]interface{}{
 		"Parameters": p.Parameters,
+	}
+}
+
+// TODO: Test the `parameters` is NOT empty
+func (p *ParameterList) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["parameters"]; ok {
+		if len(value.([]interface{})) == 0 {
+			p.Parameters = make([]Common, 0) //WARNING:::CHECK Common, infact it may be Identifier or VariableDeclaration?
+		} else {
+
+		}
 	}
 }
 
@@ -435,6 +745,18 @@ func (e *EventDefinition) Attributes() map[string]interface{} {
 		"Anonymous":  e.Anonymous,
 		"Name":       e.Name,
 		"Parameters": e.Parameters,
+	}
+}
+
+func (e *EventDefinition) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["anonymous"]; ok {
+		e.Anonymous = value.(bool)
+	}
+	if value, ok := (*data)["name"]; ok {
+		e.Name = value.(string)
+	}
+	if value, ok := (*data)["parameters"]; ok {
+		e.Parameters = value.(ParameterList)
 	}
 }
 
@@ -467,6 +789,36 @@ func (a *Assignment) Attributes() map[string]interface{} {
 	}
 }
 
+func (a *Assignment) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		a.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		a.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		a.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		a.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		a.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["leftHandSide"]; ok {
+		a.LeftHandSide = value.(Common)
+	}
+	if value, ok := (*data)["operator"]; ok {
+		a.Operator = value.(string)
+	}
+	if value, ok := (*data)["rightHandSide"]; ok {
+		a.RightHandSide = value.(Common)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		a.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // MemberAccess node
 type MemberAccess struct {
@@ -496,6 +848,36 @@ func (m *MemberAccess) Attributes() map[string]interface{} {
 	}
 }
 
+func (m *MemberAccess) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		m.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["expression"]; ok {
+		m.Expression = value.(Common)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		m.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		m.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		m.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		m.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["memberName"]; ok {
+		m.MemberName = value.(string)
+	}
+	if value, ok := (*data)["referencedDeclaration"]; ok {
+		m.ReferencedDeclaration = value.(int)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		m.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // PlacehoderStatement node
 type PlacehoderStatement struct {
@@ -504,6 +886,9 @@ type PlacehoderStatement struct {
 
 func (p *PlacehoderStatement) Attributes() map[string]interface{} {
 	return map[string]interface{}{}
+}
+
+func (p *PlacehoderStatement) Constructor(data *map[string]interface{}) {
 }
 
 // ----------------------------------------------------------------------------
@@ -520,6 +905,21 @@ func (m *ModifierDefinition) Attributes() map[string]interface{} {
 		"Name":       m.Name,
 		"Parameters": m.Parameters,
 		"Visibility": m.Visibility,
+	}
+}
+
+func (m *ModifierDefinition) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["name"]; ok {
+		m.Name = value.(string)
+	}
+	if value, ok := (*data)["parameters"]; ok {
+		value := value.(map[string]interface{})
+		var res ParameterList
+		res.Constructor(&value)
+		m.Parameters = res
+	}
+	if value, ok := (*data)["visibility"]; ok {
+		m.Visibility = value.(string)
 	}
 }
 
@@ -548,6 +948,30 @@ func (e *ElementaryTypeNameExpression) Attributes() map[string]interface{} {
 	}
 }
 
+func (e *ElementaryTypeNameExpression) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		e.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		e.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		e.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		e.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		e.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		e.TypeDescriptions = value.(TypeDescriptions)
+	}
+	if value, ok := (*data)["typeName"]; ok {
+		e.TypeName = value.(string)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // ModifierInvocation node
 type ModifierInvocation struct {
@@ -560,6 +984,15 @@ func (m *ModifierInvocation) Attributes() map[string]interface{} {
 	return map[string]interface{}{
 		"Arguments":    m.Arguments,
 		"ModifierName": m.ModifierName,
+	}
+}
+
+func (m *ModifierInvocation) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["arguments"]; ok {
+		m.Arguments = value.([]Common)
+	}
+	if value, ok := (*data)["modifierName"]; ok {
+		m.ModifierName = value.(Common)
 	}
 }
 
@@ -580,6 +1013,18 @@ func (u *UserDefinedTypeName) Attributes() map[string]interface{} {
 	}
 }
 
+func (u *UserDefinedTypeName) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["contractScope"]; ok {
+		u.ContractScope = value.(string)
+	}
+	if value, ok := (*data)["referencedDeclaration"]; ok {
+		u.ReferenceDeclaration = value.(int)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		u.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // InheritanceSpecifier node
 type InheritanceSpecifier struct {
@@ -592,6 +1037,15 @@ func (i *InheritanceSpecifier) Attributes() map[string]interface{} {
 	return map[string]interface{}{
 		"Arguments": i.Arguments,
 		"BaseName":  i.BaseName,
+	}
+}
+
+func (i *InheritanceSpecifier) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["arguments"]; ok {
+		i.Arguments = value.([]Common)
+	}
+	if value, ok := (*data)["baseName"]; ok {
+		i.BaseName = value.(Common)
 	}
 }
 
@@ -624,6 +1078,36 @@ func (u *UnaryOperation) Attributes() map[string]interface{} {
 	}
 }
 
+func (u *UnaryOperation) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		u.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		u.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		u.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		u.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		u.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["operator"]; ok {
+		u.Operator = value.(string)
+	}
+	if value, ok := (*data)["prefix"]; ok {
+		u.Prefix = value.(bool)
+	}
+	if value, ok := (*data)["subExpression"]; ok {
+		u.SubExpression = value.(Common)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		u.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // Mapping node
 type Mapping struct {
@@ -638,6 +1122,18 @@ func (m *Mapping) Attributes() map[string]interface{} {
 		"KeyType":          m.KeyType,
 		"TypeDescriptions": m.TypeDescriptions,
 		"ValueType":        m.ValueType,
+	}
+}
+
+func (m *Mapping) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["keyType"]; ok {
+		m.KeyType = value.(Common)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		m.TypeDescriptions = value.(TypeDescriptions)
+	}
+	if value, ok := (*data)["valueType"]; ok {
+		m.ValueType = value.(Common)
 	}
 }
 
@@ -662,6 +1158,24 @@ func (s *StructDefinition) Attributes() map[string]interface{} {
 	}
 }
 
+func (s *StructDefinition) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["canonicalName"]; ok {
+		s.CanonicalName = value.(string)
+	}
+	if value, ok := (*data)["members"]; ok {
+		s.Members = value.([]Common)
+	}
+	if value, ok := (*data)["name"]; ok {
+		s.Name = value.(string)
+	}
+	if value, ok := (*data)["scope"]; ok {
+		s.Scope = value.(int)
+	}
+	if value, ok := (*data)["visibility"]; ok {
+		s.Visibility = value.(string)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // UsingForDirective node
 type UsingForDirective struct {
@@ -674,6 +1188,15 @@ func (u *UsingForDirective) Attributes() map[string]interface{} {
 	return map[string]interface{}{
 		"LibraryName": u.LibraryName,
 		"TypeName":    u.TypeName,
+	}
+}
+
+func (u *UsingForDirective) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["libraryName"]; ok {
+		u.LibraryName = value.(Common)
+	}
+	if value, ok := (*data)["typeName"]; ok {
+		u.TypeName = value.(Common)
 	}
 }
 
@@ -704,6 +1227,33 @@ func (i *IndexAccess) Attributes() map[string]interface{} {
 	}
 }
 
+func (i *IndexAccess) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		i.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["baseExpression"]; ok {
+		i.BaseExpression = value.([]Common)
+	}
+	if value, ok := (*data)["indexExpression"]; ok {
+		i.IndexExpression = value.([]Common)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		i.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		i.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		i.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		i.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		i.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // EnumValue node
 type EnumValue struct {
@@ -714,6 +1264,12 @@ type EnumValue struct {
 func (e *EnumValue) Attributes() map[string]interface{} {
 	return map[string]interface{}{
 		"Name": e.Name,
+	}
+}
+
+func (e *EnumValue) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["name"]; ok {
+		e.Name = value.(string)
 	}
 }
 
@@ -734,6 +1290,18 @@ func (e *EnumDefinition) Attributes() map[string]interface{} {
 	}
 }
 
+func (e *EnumDefinition) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["canonicalName"]; ok {
+		e.CanonicalName = value.(string)
+	}
+	if value, ok := (*data)["members"]; ok {
+		e.Members = value.([]EnumValue)
+	}
+	if value, ok := (*data)["name"]; ok {
+		e.Name = value.(string)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // ArraryTypeName node
 type ArraryTypeName struct {
@@ -748,6 +1316,18 @@ func (a *ArraryTypeName) Attributes() map[string]interface{} {
 		"BaseType":         a.BaseType,
 		"Length":           a.Length,
 		"TypeDescriptions": a.TypeDescriptions,
+	}
+}
+
+func (a *ArraryTypeName) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["baseType"]; ok {
+		a.BaseType = value.(Common)
+	}
+	if value, ok := (*data)["length"]; ok {
+		a.Length = value.(string)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		a.TypeDescriptions = value.(TypeDescriptions)
 	}
 }
 
@@ -770,6 +1350,21 @@ func (f *ForStatement) Attributes() map[string]interface{} {
 	}
 }
 
+func (f *ForStatement) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["body"]; ok {
+		f.Body = value.(Block)
+	}
+	if value, ok := (*data)["condition"]; ok {
+		f.Condition = value.(BinaryOperation)
+	}
+	if value, ok := (*data)["initializationExpression"]; ok {
+		f.InitializationExpression = value.(Common)
+	}
+	if value, ok := (*data)["loopExpression"]; ok {
+		f.LoopExpression = value.(Common)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // Break node
 type Break struct {
@@ -778,6 +1373,9 @@ type Break struct {
 
 func (b *Break) Attributes() map[string]interface{} {
 	return map[string]interface{}{}
+}
+
+func (b *Break) Constructor(data *map[string]interface{}) {
 }
 
 // ----------------------------------------------------------------------------
@@ -807,6 +1405,33 @@ func (t *TupleExpression) Attributes() map[string]interface{} {
 	}
 }
 
+func (t *TupleExpression) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		t.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["components"]; ok {
+		t.Components = value.([]Common)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		t.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isInlineArray"]; ok {
+		t.IsInlineArray = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		t.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		t.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		t.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		t.TypeDescriptions = value.(TypeDescriptions)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // NewExpression node
 type NewExpression struct {
@@ -829,6 +1454,30 @@ func (n *NewExpression) Attributes() map[string]interface{} {
 		"LValueRequested":  n.LValueRequested,
 		"TypeDescriptions": n.TypeDescriptions,
 		"TypeName":         n.TypeName,
+	}
+}
+
+func (n *NewExpression) Constructor(data *map[string]interface{}) {
+	if value, ok := (*data)["argumentTypes"]; ok {
+		n.ArgumentTypes = value.([]string)
+	}
+	if value, ok := (*data)["isConstant"]; ok {
+		n.IsConstant = value.(bool)
+	}
+	if value, ok := (*data)["isLValue"]; ok {
+		n.IsLValue = value.(bool)
+	}
+	if value, ok := (*data)["isPure"]; ok {
+		n.IsPure = value.(bool)
+	}
+	if value, ok := (*data)["lValueRequested"]; ok {
+		n.LValueRequested = value.(bool)
+	}
+	if value, ok := (*data)["typeDescriptions"]; ok {
+		n.TypeDescriptions = value.(TypeDescriptions)
+	}
+	if value, ok := (*data)["typeName"]; ok {
+		n.TypeName = value.(Common)
 	}
 }
 
