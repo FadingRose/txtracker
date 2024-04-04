@@ -1,6 +1,4 @@
 build/bin/txtracker
 /logs/
 venv/
-*.sol
-*.json
 *.code-workspace
