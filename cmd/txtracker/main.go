@@ -5,6 +5,7 @@ import (
 	"txtracker/pkg/compiler"
 	"txtracker/pkg/filehandler"
 	"txtracker/pkg/parser"
+	"txtracker/pkg/printer"
 )
 
 func main() {
@@ -24,10 +25,9 @@ func main() {
 			panic(err)
 		}
 		astFilePath := path + ".ast.json"
-		err = parser.ParseAST_JSON(astFilePath)
-		if err != nil {
-			panic(err)
-		}
+		root := parser.ParseAST_JSON(astFilePath)
+		ast_printer := printer.NewASTPrinter(root)
+		ast_printer.PrintAST()
 	}
 
 }
