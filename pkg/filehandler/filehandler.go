@@ -6,6 +6,7 @@ import (
 	"strings"
 	"txtracker/pkg/common/models"
 	"txtracker/pkg/logger"
+	"fmt"
 )
 
 // filehandler.go:
@@ -26,6 +27,7 @@ type SolidityFileHandler struct {
 // loadContracts replaces the init function and is called within the constructor
 
 func NewFileHandler(dataPath string) (FileHandler, error) {
+	fmt.Println("NewFileHandler called with path:", dataPath)
 	handler := &SolidityFileHandler{
 		DataPath: dataPath,
 	}
