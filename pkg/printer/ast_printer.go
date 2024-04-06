@@ -2,6 +2,7 @@ package printer
 
 import (
 	"fmt"
+	"strings"
 	"txtracker/pkg/common/models"
 )
 
@@ -20,25 +21,27 @@ func NewASTPrinter(root *models.Common) *ASTPrinter {
 func (a *ASTPrinter) PrintAST() {
 	fmt.Print("Printing AST\n")
 
-	printAST(a.Root, 0)
+	printerHelper(a.Root, 0, "")
 }
 
-func printAST(node *models.Common, spaces int) {
+// printerHelper is a recursive helper function that prints the tree structure.
+// It takes a node, the current depth, and the prefix string for indentation.
+func printerHelper(node *models.Common, depth int, prefix string) {
 	if node == nil {
 		return
 	}
-	printNode(node)
-	childs := node.Children
-	for _, child := range childs {
-		printAST(child, len(child.Parent.NodeType)+spaces+1)
-	}
-	fmt.Printf("\n")
 
-}
-
-func printNode(node *models.Common) {
-	if node == nil {
-		return
+	// Calculate indentation based on depth
+	indent := strings.Repeat(" ", depth*4) // 4 spaces per depth level
+	if depth > 0 {
+		fmt.Println(prefix + "-> " + node.NodeType)
+	} else {
+		fmt.Println(node.NodeType)
 	}
-	fmt.Printf(" <%s>--> ", node.NodeType)
+
+	// If the node has children, recursively call this function for each child
+	newPrefix := indent + strings.Repeat(" ", len(node.NodeType)+3)
+	for _, child := range node.Children {
+		printerHelper(child, depth+1, newPrefix)
+	}
 }
