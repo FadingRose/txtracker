@@ -28,6 +28,8 @@ func (a *ASTParserImpl) ParseAST_JSON(astFilePath string) *models.Common {
 	var root models.Common
 	parseAST(JsonData, &root)
 
+	root = *root.Children[0]
+	root.SetParent(&root)
 	return &root
 }
 
@@ -87,21 +89,26 @@ func parseAST(jsonNode interface{}, root *models.Common) {
 		// Special fields set at here
 		dest.Constructor(&data)
 
-		// Recursively parse children
-
+		// Recursively parse children from "nodes" or "body"
 		childs, ok := data["nodes"].([]interface{})
+
 		if !ok {
 			return
 		}
 		for _, child := range childs {
+			logger.Info.Println("Visiting child:" + child.(map[string]interface{})["nodeType"].(string))
 			parseAST(child, dest.Instace())
 		}
+		return
 
 	case []interface{}:
 		for _, value := range data {
+			logger.Info.Println("Visiting array element")
 			parseAST(value, root)
 		}
+		return
 	default:
 		logger.Fatal.Fatalf("Unknown type: %v", data)
+		panic("Unknown type")
 	}
 }
