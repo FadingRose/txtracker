@@ -5,7 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch file",
+            "name": "Launch file - Specific .sol file",
+            "type": "go",
+            "dlvFlags": [
+                "--check-go-version=false",
+            ],
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/txtracker/main.go",
+            "args": [
+                "for.sol"
+            ]
+        },
+        {
+            "name": "Launch file - All .sol file",
             "type": "go",
             "dlvFlags": [
                 "--check-go-version=false",
