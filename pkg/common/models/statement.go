@@ -7,9 +7,82 @@ import (
 	"txtracker/pkg/logger"
 )
 
+type Statement interface {
+	DescribeStatement() string
+	Constructor(*map[string]interface{})
+}
+
 type ForInitializationStatement interface {
 	// VariableDeclarationStatement | ExpressionStatement implements this interface
 	DescribeForInitializationStatement() string
+	Constructor(*map[string]interface{})
+}
+
+// Factories
+func ForInitializationStatementFactory(data *map[string]interface{}) ForInitializationStatement {
+	common := &Common{
+		ID:       (int)((*data)["id"].(float64)),
+		NodeType: (*data)["nodeType"].(string),
+		Src:      (*data)["src"].(string),
+	}
+	if data, ok := (*data)["nodeType"]; ok {
+		switch data {
+		case "VariableDeclarationStatement":
+			return &VariableDeclarationStatement{Common: *common}
+		case "ExpressionStatement":
+			return &ExpressionStatement{Common: *common}
+		default:
+			logger.Fatal.Fatalf("Unknown type: %v", data)
+			panic("Unknown type")
+		}
+	}
+	return nil
+}
+
+func StatementFactory(data *map[string]interface{}) Statement {
+	common := &Common{
+		ID:       (int)((*data)["id"].(float64)),
+		NodeType: (*data)["nodeType"].(string),
+		Src:      (*data)["src"].(string),
+	}
+	if data, ok := (*data)["nodeType"]; ok {
+		switch data {
+		case "Block":
+			return &Block{Common: *common}
+		case "Break":
+			return &Break{Common: *common}
+		case "Continue":
+			return &Continue{Common: *common}
+		case "DoWhileStatement":
+			return &DoWhileStatement{Common: *common}
+		case "EmitStatement":
+			return &EmitStatement{Common: *common}
+		case "ExpressionStatement":
+			return &ExpressionStatement{Common: *common}
+		case "ForStatement":
+			return &ForStatement{Common: *common}
+		case "IfStatement":
+			return &IfStatement{Common: *common}
+		case "PlaceholderStatement":
+			return &PlacehoderStatement{Common: *common}
+		case "Return":
+			return &Return{Common: *common}
+		case "RevertStatement":
+			return &RevertStatement{Common: *common}
+		case "TryStatement":
+			return &TryStatement{Common: *common}
+		case "UncheckedBlock":
+			return &UncheckedBlock{Common: *common}
+		case "VariableDeclarationStatement":
+			return &VariableDeclarationStatement{Common: *common}
+		case "WhileStatement":
+			return &WhileStatement{Common: *common}
+		default:
+			logger.Fatal.Fatalf("Unknown type: %v", data)
+			panic("Unknown type")
+		}
+	}
+	return nil
 }
 
 // ----------------------------------------------------------------------------
@@ -156,11 +229,13 @@ func (d *DoWhileStatement) Attributes() map[string]interface{} {
 func (d *DoWhileStatement) Constructor(data *map[string]interface{}) {
 	if condition, ok := (*data)["condition"]; ok {
 		var res Expression
+		condition := condition.(map[string]interface{})
 		res.Constructor(&condition)
 		d.Condition = res
 	}
 	if body, ok := (*data)["body"]; ok {
 		var res Statement
+		body := body.(map[string]interface{})
 		res.Constructor(&body)
 		d.Body = res
 	}
@@ -186,6 +261,7 @@ func (e *EmitStatement) Attributes() map[string]interface{} {
 func (e *EmitStatement) Constructor(data *map[string]interface{}) {
 	if eventCall, ok := (*data)["eventCall"]; ok {
 		var res FunctionCall
+		eventCall := eventCall.(map[string]interface{})
 		res.Constructor(&eventCall)
 		e.EventCall = res
 	}
@@ -210,7 +286,8 @@ func (e *ExpressionStatement) Attributes() map[string]interface{} {
 
 func (e *ExpressionStatement) Constructor(data *map[string]interface{}) {
 	if value, ok := (*data)["expression"]; ok {
-		var res Expression
+		value := value.(map[string]interface{})
+		res := ExpressionFactory(&value)
 		res.Constructor(&value)
 		e.Expression = res
 	} else {
@@ -231,10 +308,10 @@ func (e *ExpressionStatement) DescribeForInitializationStatement() string {
 type ForStatement struct {
 	Common
 	Body                     Statement                  `json:"body"`
-	Condition                Expression                 `json:"condition"`
-	InitializationExpression ForInitializationStatement `json:"initializationExpression"`
-	LoopExpression           ExpressionStatement        `json:"loopExpression"`
-	IsSimpleCounterLoop      bool                       `json:"isSimpleCounterLoop"`
+	Condition                Expression                 `json:"condition"`                // Expression | nil
+	InitializationExpression ForInitializationStatement `json:"initializationExpression"` // VariableDeclarationStatement | ExpressionStatement | nil
+	IsSimpleCounterLoop      bool                       `json:"isSimpleCounterLoop"`      // true | false | nil
+	LoopExpression           ExpressionStatement        `json:"loopExpression"`           // ExpressionStatement | nil
 }
 
 func (f *ForStatement) Attributes() map[string]interface{} {
@@ -249,22 +326,37 @@ func (f *ForStatement) Attributes() map[string]interface{} {
 
 func (f *ForStatement) Constructor(data *map[string]interface{}) {
 	if value, ok := (*data)["body"]; ok {
-		var res Statement
+		value := value.(map[string]interface{})
+		res := StatementFactory(&value)
 		res.Constructor(&value)
 		f.Body = res
 	}
 	if value, ok := (*data)["condition"]; ok {
-		var res Expression
+		value := value.(map[string]interface{})
+		res := ExpressionFactory(&value)
 		res.Constructor(&value)
 		f.Condition = res
+	} else {
+		f.Condition = nil
 	}
 	if value, ok := (*data)["initializationExpression"]; ok {
-		var res ForInitializationStatement
+		value := value.(map[string]interface{})
+		res := ForInitializationStatementFactory(&value)
 		res.Constructor(&value)
 		f.InitializationExpression = res
+	} else {
+		f.InitializationExpression = nil
+	}
+	if value, ok := (*data)["isSimpleCounterLoop"]; ok {
+		var res bool
+		res = value.(bool)
+		f.IsSimpleCounterLoop = res
+	} else {
+		f.IsSimpleCounterLoop = false // default value
 	}
 	if value, ok := (*data)["loopExpression"]; ok {
 		var res ExpressionStatement
+		value := value.(map[string]interface{})
 		res.Constructor(&value)
 		f.LoopExpression = res
 	}
@@ -293,17 +385,23 @@ func (i *IfStatement) Attributes() map[string]interface{} {
 
 func (i *IfStatement) Constructor(data *map[string]interface{}) {
 	if value, ok := (*data)["condition"]; ok {
-		var res Expression
+		value := value.(map[string]interface{})
+		res := ExpressionFactory(&value)
 		res.Constructor(&value)
 		i.Condition = res
 	}
 	if value, ok := (*data)["falseBody"]; ok {
 		var res Statement
-		res.Constructor(&value)
+		if value != nil {
+			value := value.(map[string]interface{})
+			res.Constructor(&value)
+		} else {
+			res = nil
+		}
 		i.FalseBody = res
 	}
-	if value, ok := (*data)["trueBody"]; ok {
-		var res Statement
+	if value, ok := (*data)["trueBody"].(map[string]interface{}); ok {
+		res := StatementFactory(&value)
 		res.Constructor(&value)
 		i.TrueBody = res
 	}
@@ -347,12 +445,18 @@ func (r *Return) Attributes() map[string]interface{} {
 
 func (r *Return) Constructor(data *map[string]interface{}) {
 	if value, ok := (*data)["expression"]; ok {
-		var res Expression
-		res.Constructor(&value)
-		r.Expression = res
+		if value != nil {
+			value := value.(map[string]interface{})
+			res := ExpressionFactory(&value)
+			res.Constructor(&value)
+		} else {
+			r.Expression = nil
+		}
 	}
 	if value, ok := (*data)["functionReturnParameters"]; ok {
-		r.FunctionReturnParameters = value.(int)
+		var res int
+		res = (int)(value.(float64))
+		r.FunctionReturnParameters = res
 	}
 }
 
@@ -376,6 +480,7 @@ func (r *RevertStatement) Attributes() map[string]interface{} {
 func (r *RevertStatement) Constructor(data *map[string]interface{}) {
 	if value, ok := (*data)["errorCall"]; ok {
 		var res FunctionCall
+		value := value.(map[string]interface{})
 		res.Constructor(&value)
 		r.ErrorCall = res
 	}
@@ -412,6 +517,7 @@ func (t *TryStatement) Constructor(data *map[string]interface{}) {
 	}
 	if value, ok := (*data)["externalCall"]; ok {
 		var res FunctionCall
+		value := value.(map[string]interface{})
 		res.Constructor(&value)
 		t.ExternalCall = res
 	}
@@ -470,21 +576,39 @@ func (v *VariableDeclarationStatement) Attributes() map[string]interface{} {
 
 func (v *VariableDeclarationStatement) Constructor(data *map[string]interface{}) {
 	if value, ok := (*data)["assignments"]; ok {
-		v.Assignments = value.([]int)
+		if value != nil {
+			var res []int
+			for _, val := range value.([]interface{}) {
+				res = append(res, (int)(val.(float64)))
+			}
+			v.Assignments = res
+		} else {
+			v.Assignments = nil
+		}
 	}
 	if value, ok := (*data)["declarations"]; ok {
-		var res []VariableDeclaration
-		for _, val := range value.([]map[string]interface{}) {
-			var temp VariableDeclaration
-			temp.Constructor(&val)
-			res = append(res, temp)
+		if value != nil {
+			var res []VariableDeclaration
+			for _, val := range value.([]interface{}) {
+				var temp VariableDeclaration
+				val := val.(map[string]interface{})
+				temp.Constructor(&val)
+				res = append(res, temp)
+			}
+			v.Declarrations = res
+		} else {
+			v.Declarrations = nil
 		}
-		v.Declarrations = res
 	}
 	if value, ok := (*data)["initialValue"]; ok {
-		var res Expression
-		res.Constructor(&value)
-		v.InitialValue = res
+		if value != nil {
+			value := value.(map[string]interface{})
+			res := ExpressionFactory(&value)
+			res.Constructor(&value)
+			v.InitialValue = res
+		} else {
+			v.InitialValue = nil
+		}
 	}
 }
 
@@ -514,11 +638,13 @@ func (w *WhileStatement) Attributes() map[string]interface{} {
 func (w *WhileStatement) Constructor(data *map[string]interface{}) {
 	if value, ok := (*data)["body"]; ok {
 		var res Statement
+		value := value.(map[string]interface{})
 		res.Constructor(&value)
 		w.Body = res
 	}
 	if value, ok := (*data)["condition"]; ok {
 		var res Expression
+		value := value.(map[string]interface{})
 		res.Constructor(&value)
 		w.Condition = res
 	}
