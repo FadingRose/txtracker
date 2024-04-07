@@ -83,8 +83,8 @@ func parseAST(jsonNode interface{}, root *models.Common) {
 		}
 
 		// Set relationship between parent and child
-		dest.SetParent(root.Instace())
-		root.AddChild(dest.Instace())
+		dest.SetParent(root.Instance())
+		root.AddChild(dest.Instance())
 
 		// Special fields set at here
 		dest.Constructor(&data)
@@ -97,7 +97,7 @@ func parseAST(jsonNode interface{}, root *models.Common) {
 		}
 		for _, child := range childs {
 			logger.Info.Println("Visiting child:" + child.(map[string]interface{})["nodeType"].(string))
-			parseAST(child, dest.Instace())
+			parseAST(child, dest.Instance())
 		}
 		return
 
