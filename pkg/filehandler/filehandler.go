@@ -1,12 +1,12 @@
 package filehandler
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"txtracker/pkg/common/models"
 	"txtracker/pkg/logger"
-	"fmt"
 )
 
 // filehandler.go:
@@ -20,54 +20,86 @@ type FileHandler interface {
 }
 
 type SolidityFileHandler struct {
-	DataPath  string
-	contracts []models.Contract
+	DataPath   string
+	contracts  []models.Contract
+	isSpecific bool
 }
 
 // loadContracts replaces the init function and is called within the constructor
 
-func NewFileHandler(dataPath string) (FileHandler, error) {
-	fmt.Println("NewFileHandler called with path:", dataPath)
+func NewFileHandler(dataPath string, specific_file string) (FileHandler, error) {
+	dataPath = filepath.Join(dataPath, specific_file)
+
 	handler := &SolidityFileHandler{
 		DataPath: dataPath,
 	}
-	if err := handler.loadContracts(); err != nil {
-		return nil, err
+
+	if specific_file != "" {
+		handler.isSpecific = true
+	} else {
+		handler.isSpecific = false
 	}
+
+	fmt.Println("NewFileHandler called with path:", dataPath)
+	handler.loadContracts()
+
 	return handler, nil
 }
 
-func (s *SolidityFileHandler) loadContracts() error {
-	err := filepath.Walk(s.DataPath, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			fileName, fileExtension := filepath.Base(path), filepath.Ext(path)
+func (s *SolidityFileHandler) loadContracts() {
+	var solCode models.SoliditySourceCode
+	var evmCode models.EVMByteCode
 
-			var solCode models.SoliditySourceCode
-			var evmCode models.EVMByteCode
+	if !s.isSpecific {
+		// Walk through the directory and read all files
+		err := filepath.Walk(s.DataPath, func(path string, info os.FileInfo, err error) error {
+			if !info.IsDir() {
+				fileName, fileExtension := filepath.Base(path), filepath.Ext(path)
 
-			switch fileExtension {
-			case ".sol":
-				solCode = readThenDumpFileContent(path)
-			case ".evm":
-				evmCode = readThenDumpFileContent(path)
-			default:
-				logger.Warning.Println("Unknown file extension:", fileExtension)
+				switch fileExtension {
+				case ".sol":
+					solCode = readThenDumpFileContent(path)
+				case ".evm":
+					evmCode = readThenDumpFileContent(path)
+				default:
+					logger.Warning.Println("Unknown file extension:", fileExtension)
+				}
+
+				s.contracts = append(s.contracts,
+					models.Contract{
+						ContractName: strings.Split(fileName, ".")[0],
+						SolidityCode: models.SolidityCode{SourceCode: solCode},
+						EVMCode:      models.EVMCode{ByteCode: evmCode},
+					},
+				)
 			}
-
-			s.contracts = append(s.contracts,
-				models.Contract{
-					ContractName: strings.Split(fileName, ".")[0],
-					SolidityCode: models.SolidityCode{SourceCode: solCode},
-					EVMCode:      models.EVMCode{ByteCode: evmCode},
-				},
-			)
+			return nil
+		})
+		if err != nil {
+			logger.Fatal.Println("Error reading contract files:", err)
+			panic(err)
 		}
-		return nil
-	})
-	if err != nil {
-		logger.Fatal.Println("Error reading contract files:", err)
+
+	} else {
+		// Only load the specific file
+		fileName, fileExtension := filepath.Base(s.DataPath), filepath.Ext(s.DataPath)
+		switch fileExtension {
+		case ".sol":
+			solCode = readThenDumpFileContent(s.DataPath)
+		case ".evm":
+			evmCode = readThenDumpFileContent(s.DataPath)
+		default:
+			logger.Warning.Println("Unknown file extension:", fileExtension)
+		}
+
+		s.contracts = append(s.contracts,
+			models.Contract{
+				ContractName: strings.Split(fileName, ".")[0],
+				SolidityCode: models.SolidityCode{SourceCode: solCode},
+				EVMCode:      models.EVMCode{ByteCode: evmCode},
+			},
+		)
 	}
-	return err
 }
 
 // readThenDumpFileContent modified to return the file content directly
@@ -100,10 +132,15 @@ func (s SolidityFileHandler) GetContractData(contractName string) (models.Solidi
 
 func (s SolidityFileHandler) GetContractSolPathList() []string {
 	var contractPathList []string
-	for _, contract := range s.contracts {
-		contractPathList = append(contractPathList,
-			filepath.Join(s.DataPath, contract.ContractName+".sol"))
+	if s.isSpecific {
+		contractPathList = append(contractPathList, s.DataPath)
+	} else {
+		for _, contract := range s.contracts {
+			contractPathList = append(contractPathList,
+				filepath.Join(s.DataPath, contract.ContractName+".sol"))
+		}
 	}
+
 	return contractPathList
 }
 
