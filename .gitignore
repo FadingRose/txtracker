@@ -2,3 +2,4 @@ build/bin/txtracker
 /logs/
 venv/
 *.code-workspace
+dataset/
