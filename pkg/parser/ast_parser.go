@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"txtracker/pkg/common/models"
+	"txtracker/pkg/ast"
 	"txtracker/pkg/logger"
 )
 
 type ASTParser interface {
-	ParseAST_JSON(astFilePath string) *models.Common
+	ParseAST_JSON(astFilePath string) *ast.Common
 }
 
 type ASTParserImpl struct {
@@ -21,11 +21,11 @@ func NewASTParser() ASTParser {
 	return &ASTParserImpl{}
 }
 
-func (a *ASTParserImpl) ParseAST_JSON(astFilePath string) *models.Common {
+func (a *ASTParserImpl) ParseAST_JSON(astFilePath string) *ast.Common {
 	logger.Info.Println("ParseAST_JSON called with path:", astFilePath)
 	JsonData := collectJSON(astFilePath)
 
-	var root models.Common
+	var root ast.Common
 	parseAST(JsonData, &root)
 
 	root = *root.Children[0]
@@ -71,13 +71,13 @@ func collectJSON(filePath string) interface{} {
 	return result
 }
 
-func parseAST(jsonNode interface{}, root *models.Common) {
+func parseAST(jsonNode interface{}, root *ast.Common) {
 
 	switch data := jsonNode.(type) {
 	case map[string]interface{}:
 		// Try create ASTNode from JSON
 		// Common fields set at here
-		dest, err := models.StringToASTNode(data)
+		dest, err := ast.NodeFactory(data)
 		if err != nil {
 			fmt.Println("Error converting JSON to ASTNode:", err)
 		}
@@ -87,7 +87,7 @@ func parseAST(jsonNode interface{}, root *models.Common) {
 		root.AddChild(dest.Instance())
 
 		// Special fields set at here
-		dest.Constructor(&data)
+		dest.ASTNode.Constructor(&data)
 
 		// Recursively parse children from "nodes" or "body"
 		childs, ok := data["nodes"].([]interface{})

@@ -3,18 +3,18 @@ package printer
 import (
 	"fmt"
 	"strings"
-	"txtracker/pkg/common/models"
+	"txtracker/pkg/ast"
 )
 
 type Printer struct {
-	Print (*models.Common)
+	Print (*ast.Common)
 }
 
 type ASTPrinter struct {
-	Root *models.Common
+	Root *ast.Common
 }
 
-func NewASTPrinter(root *models.Common) *ASTPrinter {
+func NewASTPrinter(root *ast.Common) *ASTPrinter {
 	return &ASTPrinter{Root: root}
 }
 
@@ -26,7 +26,7 @@ func (a *ASTPrinter) PrintAST() {
 
 // printerHelper is a recursive helper function that prints the tree structure.
 // It takes a node, the current depth, and the prefix string for indentation.
-func printerHelper(node *models.Common, depth int, prefix string) {
+func printerHelper(node *ast.Common, depth int, prefix string) {
 	if node == nil {
 		return
 	}
