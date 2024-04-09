@@ -4,15 +4,10 @@ package ast
 // Inline nodes of the top-level nodes
 // ----------------------------------------------------------------------------
 
-type InheritanceSpecifierBaseNameInterface interface {
-	DescribeInheritanceSpecifierBaseName() string
-	Constructor(data *map[string]interface{})
-}
-
 type InheritanceSpecifier struct {
 	Common
-	Arguments []Expression                          `json:"arguments"` // Expression[] | null
-	BaseName  InheritanceSpecifierBaseNameInterface // UserDefinedTypeName | IdentifierPath
+	Arguments []Expression `json:"arguments"` // Expression[] | null
+	BaseName  *Common      // UserDefinedTypeName | IdentifierPath
 }
 
 func (i *InheritanceSpecifier) Attributes() *map[string]interface{} {
@@ -27,12 +22,12 @@ func (i *InheritanceSpecifier) Constructor(data *map[string]interface{}) {
 		i.Arguments = make([]Expression, len(data))
 		for cnt, v := range data {
 			v := v.(map[string]interface{})
-			i.Arguments[cnt].Constructor(&v)
+			i.Arguments[cnt].ASTNode.Constructor(&v)
 		}
 	}
 
 	if data, ok := (*data)["baseName"].(map[string]interface{}); ok {
-		i.BaseName.Constructor(&data)
+		i.BaseName.ASTNode.Constructor(&data)
 	}
 }
 
@@ -204,122 +199,11 @@ func (p *ParameterList) New() *ParameterList {
 	}
 }
 
-type VariableDeclaration struct {
-	Common
-	BaseFunctions    BaseFunctions           `json:"baseFunctions"`    // int[] | null
-	Constant         bool                    `json:"constant"`         // boolean
-	Documentation    StructuredDocumentation `json:"documentation"`    // StructuredDocumentation | null
-	FunctionSelector string                  `json:"functionSelector"` // string | null
-	Indexed          bool                    `json:"indexed"`          // boolean
-	Mutability       Mutability              `json:"mutability"`       // string
-	Name             string                  `json:"name"`             // string
-	NameLocation     string                  `json:"nameLocation"`     // string | null
-	Overrides        OverrideSpecifier       `json:"overrides"`        // OverrideSpecifier | null
-	Scope            int                     `json:"scope"`            // int
-	StateVariable    bool                    `json:"stateVariable"`    // boolean
-	StorageLocation  StorageLocation         `json:"storageLocation"`  // string
-	TypeDescriptions TypeDescriptions        `json:"typeDescriptions"` // TypeDescriptions
-	TypeName         TypeName                `json:"typeName"`         // TypeName
-	Value            Expression              `json:"value"`            // Expression | null
-	Visibility       Visibility              `json:"visibility"`       // string
-}
-
-func (v *VariableDeclaration) Attributes() *map[string]interface{} {
-	return &map[string]interface{}{
-		"BaseFunctions":    v.BaseFunctions,
-		"Constant":         v.Constant,
-		"Documentation":    v.Documentation,
-		"FunctionSelector": v.FunctionSelector,
-		"Indexed":          v.Indexed,
-		"Mutability":       v.Mutability,
-		"Name":             v.Name,
-		"NameLocation":     v.NameLocation,
-		"Overrides":        v.Overrides,
-		"Scope":            v.Scope,
-		"StateVariable":    v.StateVariable,
-		"StorageLocation":  v.StorageLocation,
-		"TypeDescriptions": v.TypeDescriptions,
-		"TypeName":         v.TypeName,
-		"Value":            v.Value,
-		"Visibility":       v.Visibility,
-	}
-}
-
-func (v *VariableDeclaration) Constructor(data *map[string]interface{}) {
-	if data, ok := (*data)["baseFunctions"].([]float64); ok {
-		v.BaseFunctions = make(BaseFunctions, len(data))
-		v.BaseFunctions.Constructor(&data)
-	}
-
-	if data, ok := (*data)["constant"].(bool); ok {
-		v.Constant = data
-	}
-
-	if data, ok := (*data)["documentation"].(map[string]interface{}); ok {
-		v.Documentation.Constructor(&data)
-	}
-
-	if data, ok := (*data)["functionSelector"].(string); ok {
-		v.FunctionSelector = data
-	}
-
-	if data, ok := (*data)["indexed"].(bool); ok {
-		v.Indexed = data
-	}
-
-	if data, ok := (*data)["mutability"].(string); ok {
-		v.Mutability = Mutability(data)
-	}
-
-	if data, ok := (*data)["name"].(string); ok {
-		v.Name = data
-	}
-
-	if data, ok := (*data)["nameLocation"].(string); ok {
-		v.NameLocation = data
-	}
-
-	if data, ok := (*data)["overrides"].(map[string]interface{}); ok {
-		v.Overrides.Constructor(&data)
-	}
-
-	if data, ok := (*data)["scope"].(int); ok {
-		v.Scope = data
-	}
-
-	if data, ok := (*data)["stateVariable"].(bool); ok {
-		v.StateVariable = data
-	}
-
-	if data, ok := (*data)["storageLocation"].(string); ok {
-		v.StorageLocation = StorageLocation(data)
-	}
-
-	if data, ok := (*data)["typeDescriptions"].(map[string]interface{}); ok {
-		v.TypeDescriptions.Constructor(&data)
-	}
-
-	if data, ok := (*data)["typeName"].(map[string]interface{}); ok {
-		v.TypeName.Constructor(&data)
-	}
-
-	if data, ok := (*data)["value"].(map[string]interface{}); ok {
-		v.Value.Constructor(&data)
-	}
-
-	if data, ok := (*data)["visibility"].(string); ok {
-		v.Visibility = Visibility(data)
-	}
-}
-
-type OverideSpecifierInterface interface {
-	DescribeOverrideSpecifier() string
-	Constructor(data *map[string]interface{})
-}
+type Overrides *Common //UserDefinedTypeName IdentifierPath
 
 type OverrideSpecifier struct {
 	Common
-	Overrides []OverideSpecifierInterface `json:"overrides"`
+	Overrides []Overrides `json:"overrides"`
 }
 
 func (o *OverrideSpecifier) Attributes() *map[string]interface{} {
@@ -330,10 +214,12 @@ func (o *OverrideSpecifier) Attributes() *map[string]interface{} {
 
 func (o *OverrideSpecifier) Constructor(data *map[string]interface{}) {
 	if data, ok := (*data)["overrides"].([]interface{}); ok {
-		o.Overrides = make([]OverideSpecifierInterface, len(data))
-		for cnt, v := range data {
+		//o.Overrides = make([]OverrideSpecifier, len(data))
+		for _, v := range data {
 			v := v.(map[string]interface{})
-			o.Overrides[cnt].Constructor(&v)
+			override := NodeFactory(v)
+			override.ASTNode.Constructor(&v)
+			o.Overrides = append(o.Overrides, override)
 		}
 	}
 }

@@ -69,3 +69,11 @@ func (b *BaseFunctions) Constructor(data *[]float64) {
 		*b = append(*b, int(value))
 	}
 }
+
+type Literals []string
+
+func (l *Literals) Constructor(data *[]string) {
+	for _, value := range *data {
+		*l = append(*l, value)
+	}
+}

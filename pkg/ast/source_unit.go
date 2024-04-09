@@ -106,6 +106,7 @@ func (c *ContractDefinition) Constructor(data *map[string]interface{}) {
 	}
 
 	if data, ok := (*data)["documentation"].(map[string]interface{}); ok {
+		c.Documentation = *NodeFactory(data).ToStructuredDocumentation()
 		c.Documentation.Constructor(&data)
 	}
 
@@ -165,13 +166,16 @@ func (e *EnumDefinition) Constructor(data *map[string]interface{}) {
 		e.CanonicaName = data
 	}
 	if data, ok := (*data)["documentation"].(map[string]interface{}); ok {
+		e.Documentation = *NodeFactory(data).ToStructuredDocumentation()
 		e.Documentation.Constructor(&data)
 	}
 	if data, ok := (*data)["members"].([]interface{}); ok {
-		e.Members = make([]EnumValue, len(data))
-		for i, v := range data {
+		//e.Members = make([]EnumValue, len(data))
+		for _, v := range data {
 			v := v.(map[string]interface{})
-			e.Members[i].Constructor(&v)
+			member := NodeFactory(v).ToEnumValue()
+			member.Constructor(&v)
+			e.Members = append(e.Members, *member)
 		}
 	}
 	if data, ok := (*data)["name"].(string); ok {
@@ -202,6 +206,7 @@ func (e *ErrorDefinition) Attributes() *map[string]interface{} {
 
 func (e *ErrorDefinition) Constructor(data *map[string]interface{}) {
 	if data, ok := (*data)["documentation"].(map[string]interface{}); ok {
+		e.Documentation = *NodeFactory(data).ToStructuredDocumentation()
 		e.Documentation.Constructor(&data)
 	}
 	if data, ok := (*data)["errorSelector"].(string); ok {
@@ -217,6 +222,263 @@ func (e *ErrorDefinition) Constructor(data *map[string]interface{}) {
 		e.NameLocation = data
 	}
 	if data, ok := (*data)["parameters"].(map[string]interface{}); ok {
+		e.Parameters = *NodeFactory(data).ToParameterList()
 		e.Parameters.Constructor(&data)
+	}
+}
+
+type PragmaDirective struct {
+	Common
+	Literals Literals `json:"literals"`
+}
+
+func (p *PragmaDirective) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"Literals": p.Literals,
+	}
+}
+
+func (p *PragmaDirective) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["literals"].([]string); ok {
+		p.Literals = make(Literals, len(data))
+		p.Literals.Constructor(&data)
+	}
+}
+
+type FunctionDefinition struct {
+	Common
+	Body             Block                   `json:"body"`             // Block | null
+	Documentation    StructuredDocumentation `json:"documentation"`    // StructuredDocumentation | null
+	FunctionSelector string                  `json:"functionSelector"` // string | null
+	Implemented      bool                    `json:"implemented"`
+	Kind             FunctionKind            `json:"kind"`
+	Modifiers        []ModifierInvocation    `json:"modifiers"`
+	Name             string                  `json:"name"`
+	NameLocation     string                  `json:"nameLocation"` // string | null
+	Overrides        OverrideSpecifier       `json:"overrides"`    // OverrideSpecifier | null
+	Parameters       ParameterList           `json:"parameters"`
+	ReturnParameters ParameterList           `json:"returnParameters"`
+	Scope            int                     `json:"scope"`
+	StateMutability  StateMutability         `json:"stateMutability"`
+	Virtual          bool                    `json:"virtual"`
+	Visibility       Visibility              `json:"visibility"`
+}
+
+func (f *FunctionDefinition) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"Body":             f.Body,
+		"Documentation":    f.Documentation,
+		"FunctionSelector": f.FunctionSelector,
+		"Implemented":      f.Implemented,
+		"Kind":             f.Kind,
+		"Modifiers":        f.Modifiers,
+		"Name":             f.Name,
+		"NameLocation":     f.NameLocation,
+		"Overrides":        f.Overrides,
+		"Parameters":       f.Parameters,
+		"ReturnParameters": f.ReturnParameters,
+		"Scope":            f.Scope,
+		"StateMutability":  f.StateMutability,
+		"Virtual":          f.Virtual,
+		"Visibility":       f.Visibility,
+	}
+}
+
+func (f *FunctionDefinition) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["body"].(map[string]interface{}); ok {
+		f.Body = *NodeFactory(data).ToBlock()
+		f.Body.Constructor(&data)
+	}
+
+	if data, ok := (*data)["documentation"].(map[string]interface{}); ok {
+		f.Documentation = *NodeFactory(data).ToStructuredDocumentation()
+		f.Documentation.Constructor(&data)
+	}
+
+	if data, ok := (*data)["functionSelector"].(string); ok {
+		f.FunctionSelector = data
+	}
+
+	if data, ok := (*data)["implemented"].(bool); ok {
+		f.Implemented = data
+	}
+
+	if data, ok := (*data)["kind"].(string); ok {
+		f.Kind = FunctionKind(data)
+	}
+
+	if data, ok := (*data)["modifiers"].([]interface{}); ok {
+		//f.Modifiers = make([]ModifierInvocation, len(data))
+		for _, v := range data {
+			v := v.(map[string]interface{})
+			mi := NodeFactory(v).ToModifierInvocation()
+			mi.Constructor(&v)
+			f.Modifiers = append(f.Modifiers, *mi)
+		}
+	}
+
+	if data, ok := (*data)["name"].(string); ok {
+		f.Name = data
+	}
+
+	if data, ok := (*data)["nameLocation"].(string); ok {
+		f.NameLocation = data
+	}
+
+	if data, ok := (*data)["overrides"].(map[string]interface{}); ok {
+		f.Overrides = *NodeFactory(data).ToOverrideSpecifier()
+		f.Overrides.Constructor(&data)
+	}
+
+	if data, ok := (*data)["parameters"].(map[string]interface{}); ok {
+		f.Parameters = *NodeFactory(data).ToParameterList()
+		f.Parameters.Constructor(&data)
+	}
+
+	if data, ok := (*data)["returnParameters"].(map[string]interface{}); ok {
+		f.ReturnParameters = *NodeFactory(data).ToParameterList()
+		f.ReturnParameters.Constructor(&data)
+	}
+
+	if data, ok := (*data)["scope"].(int); ok {
+		f.Scope = data
+	}
+
+	if data, ok := (*data)["stateMutability"].(string); ok {
+		f.StateMutability = StateMutability(data)
+	}
+
+	if data, ok := (*data)["virtual"].(bool); ok {
+		f.Virtual = data
+	}
+
+	if data, ok := (*data)["visibility"].(string); ok {
+		f.Visibility = Visibility(data)
+	}
+}
+
+type ModifierInvocation struct {
+	Common
+	Arguments    []Expression `json:"arguments"` // Expression[] || null
+	Kind         ModifierKind `json:"kind"`
+	ModifierName ModifierName `json:"modifierName"` // Identifier | IdentifierPath
+}
+
+func (m *ModifierInvocation) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"Arguments":    m.Arguments,
+		"Kind":         m.Kind,
+		"ModifierName": m.ModifierName,
+	}
+}
+
+func (m *ModifierInvocation) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["arguments"].([]interface{}); ok {
+		//m.Arguments = make([]Expression, len(data))
+		for _, v := range data {
+			v := v.(map[string]interface{})
+			//m.Arguments[i].ASTNode.Constructor(&v)
+			expr := NodeFactory(v)
+			expr.ASTNode.Constructor(&v)
+		}
+	}
+
+	if data, ok := (*data)["kind"].(string); ok {
+		m.Kind = ModifierKind(data)
+	}
+
+	if data, ok := (*data)["modifierName"].(map[string]interface{}); ok {
+		m.ModifierName = NodeFactory(data)
+		m.ModifierName.ASTNode.Constructor(&data)
+	}
+}
+
+type FunctionCall struct {
+	Common
+	ArgumentTypes    []TypeDescriptions `json:"argumentTypes"`
+	Arguments        []Expression       `json:"arguments"`
+	IsConstant       bool               `json:"isConstant"`
+	IsLValue         bool               `json:"isLValue"`
+	IsPure           bool               `json:"isPure"`
+	Kind             FunctionCallKind   `json:"kind"`
+	LValueRequested  bool               `json:"lValueRequested"`
+	NameLocations    []string           `json:"nameLocations"`
+	Names            []string           `json:"names"`
+	TryCall          bool               `json:"tryCall"`
+	TypeDescriptions TypeDescriptions   `json:"typeDescriptions"`
+}
+
+func (f *FunctionCall) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"ArgumentTypes":    f.ArgumentTypes,
+		"Arguments":        f.Arguments,
+		"IsConstant":       f.IsConstant,
+		"IsLValue":         f.IsLValue,
+		"IsPure":           f.IsPure,
+		"Kind":             f.Kind,
+		"LValueRequested":  f.LValueRequested,
+		"NameLocations":    f.NameLocations,
+		"Names":            f.Names,
+		"TryCall":          f.TryCall,
+		"TypeDescriptions": f.TypeDescriptions,
+	}
+}
+
+func (f *FunctionCall) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["argumentTypes"].([]interface{}); ok {
+		//f.ArgumentTypes = make([]TypeDescriptions, len(data))
+		for _, v := range data {
+			v := v.(map[string]interface{})
+			td := NodeFactory(v).ToTypeDescriptions()
+			td.Constructor(&v)
+			f.ArgumentTypes = append(f.ArgumentTypes, *td)
+		}
+	}
+
+	if data, ok := (*data)["arguments"].([]interface{}); ok {
+		//f.Arguments = make([]Expression, len(data))
+		for _, v := range data {
+			v := v.(map[string]interface{})
+			expr := NodeFactory(v)
+			expr.ASTNode.Constructor(&v)
+			f.Arguments = append(f.Arguments, expr)
+		}
+	}
+
+	if data, ok := (*data)["isConstant"].(bool); ok {
+		f.IsConstant = data
+	}
+
+	if data, ok := (*data)["isLValue"].(bool); ok {
+		f.IsLValue = data
+	}
+
+	if data, ok := (*data)["isPure"].(bool); ok {
+		f.IsPure = data
+	}
+
+	if data, ok := (*data)["kind"].(string); ok {
+		f.Kind = FunctionCallKind(data)
+	}
+
+	if data, ok := (*data)["lValueRequested"].(bool); ok {
+		f.LValueRequested = data
+	}
+
+	if data, ok := (*data)["nameLocations"].([]string); ok {
+		f.NameLocations = data
+	}
+
+	if data, ok := (*data)["names"].([]string); ok {
+		f.Names = data
+	}
+
+	if data, ok := (*data)["tryCall"].(bool); ok {
+		f.TryCall = data
+	}
+
+	if data, ok := (*data)["typeDescriptions"].(map[string]interface{}); ok {
+		f.TypeDescriptions = TypeDescriptions{}
+		f.TypeDescriptions.Constructor(&data)
 	}
 }

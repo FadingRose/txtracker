@@ -1,35 +1,72 @@
 package ast
 
-import "fmt"
+import (
+	"txtracker/pkg/logger"
+)
 
-type ASTNode interface {
-	Attributes() *map[string]interface{}
-	Constructor(data *map[string]interface{})
+func NodeFactory(data map[string]interface{}) *Common {
+	common, nodeType := commonFactory(data)
+	common.ASTNode = astNodes[nodeType]()
+	return common
 }
 
-func NodeFactory(data map[string]interface{}) (*Common, error) {
+var astNodes = map[string]func() ASTNode{
+	"SourceUnit":          func() ASTNode { return &SourceUnit{} },
+	"ContractDefinition":  func() ASTNode { return &ContractDefinition{} },
+	"PragmaDirective":     func() ASTNode { return &PragmaDirective{} },
+	"FunctionDefinition":  func() ASTNode { return &FunctionDefinition{} },
+	"VariableDeclaration": func() ASTNode { return &VariableDeclaration{} },
+
+	// Functions
+	"FunctionCall": func() ASTNode { return &FunctionCall{} },
+
+	// Parameters
+	"ParameterList": func() ASTNode { return &ParameterList{} },
+
+	// Modifiers
+	"ModifierDefinition": func() ASTNode { return &ModifierDefinition{} },
+
+	// Statements
+	"Block":                        func() ASTNode { return &Block{} },
+	"IfStatement":                  func() ASTNode { return &IfStatement{} },
+	"Return":                       func() ASTNode { return &Return{} },
+	"VariableDeclarationStatement": func() ASTNode { return &VariableDeclarationStatement{} },
+	"ExpressionStatement":          func() ASTNode { return &ExpressionStatement{} },
+	"PlaceholderStatement":         func() ASTNode { return &PlaceholderStatement{} },
+
+	// Expressions
+	"BinaryOperation": func() ASTNode { return &BinaryOperation{} },
+	"Identifier":      func() ASTNode { return &Identifier{} },
+	"Literal":         func() ASTNode { return &Literal{} },
+	"Assignment":      func() ASTNode { return &Assignment{} },
+	"MemberAccess":    func() ASTNode { return &MemberAccess{} },
+	"IndexAccess":     func() ASTNode { return &IndexAccess{} },
+
+	// TypeNames
+	"ElementaryTypeName": func() ASTNode { return &ElementaryTypeName{} },
+	"Mapping":            func() ASTNode { return &Mapping{} },
+}
+
+func commonFactory(data map[string]interface{}) (*Common, string) {
 	nodeType, ok := data["nodeType"].(string)
 	if !ok || nodeType == "" {
-		return nil, fmt.Errorf("nodeType not found")
+		logger.Fatal.Println("nodeType not found")
+		panic("nodeType not found")
 	}
 	src := data["src"].(string)
 	if !ok || src == "" {
-		return nil, fmt.Errorf("src not found")
+		logger.Fatal.Println("src not found")
+		panic("src not found")
 	}
 	id := int(data["id"].(float64))
 	if !ok || id == 0 {
-		return nil, fmt.Errorf("id not found or id is 0")
+		logger.Fatal.Println("id not found or id is 0")
+		panic("id not found or id is 0")
 	}
 	common := &Common{
 		NodeType: nodeType,
 		Src:      src,
 		ID:       id,
 	}
-	common.ASTNode = astNodes[nodeType]()
-	return common, nil
-}
-
-var astNodes = map[string]func() ASTNode{
-	"SourceUnit":         func() ASTNode { return &SourceUnit{} },
-	"ContractDefinition": func() ASTNode { return &ContractDefinition{} },
+	return common, nodeType
 }

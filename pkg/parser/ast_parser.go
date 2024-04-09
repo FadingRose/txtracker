@@ -3,7 +3,6 @@ package parser
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"txtracker/pkg/ast"
@@ -77,10 +76,7 @@ func parseAST(jsonNode interface{}, root *ast.Common) {
 	case map[string]interface{}:
 		// Try create ASTNode from JSON
 		// Common fields set at here
-		dest, err := ast.NodeFactory(data)
-		if err != nil {
-			fmt.Println("Error converting JSON to ASTNode:", err)
-		}
+		dest := ast.NodeFactory(data)
 
 		// Set relationship between parent and child
 		dest.SetParent(root.Instance())
