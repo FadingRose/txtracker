@@ -55,6 +55,10 @@ const (
 	FunctionKind_FreeFunction FunctionKind = "freeFunction"
 )
 
+func (f FunctionKind) String() string {
+	return string(f)
+}
+
 type ModifierKind string
 
 const (
