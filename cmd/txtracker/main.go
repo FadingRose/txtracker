@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"txtracker/pkg/cfg"
 	"txtracker/pkg/compiler"
 	"txtracker/pkg/filehandler"
 	"txtracker/pkg/logger"
 	"txtracker/pkg/parser"
 	"txtracker/pkg/printer"
+	symboltable "txtracker/pkg/symbol_table"
 )
 
 func main() {
@@ -38,6 +40,9 @@ func main() {
 		}
 		astFilePath := path + ".ast.json"
 		root := parser.ParseAST_JSON(astFilePath)
+		symbol_table := symboltable.NewGlobalSymbolTable(root)
+		cfg.NewCFG(root, symbol_table)
+
 		ast_printer := printer.NewASTPrinter(root)
 		ast_printer.PrintAST()
 	}
