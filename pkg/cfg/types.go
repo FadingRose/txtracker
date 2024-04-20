@@ -1,5 +1,10 @@
 package cfg
 
+import (
+	AST "txtracker/pkg/ast"
+	ST "txtracker/pkg/symbol_table"
+)
+
 type StatementType int
 
 const (
@@ -18,24 +23,67 @@ const (
 	UncheckedBlock
 	VariableDeclaration
 	While
+	// Expression Statements includes require and assert
+	Require
+	Assert
+	FunctionCall
+	// If statement's condition includes StateVariable
+	Authorize
+	// Modify: Write to state variable
+	Modify
 )
+
+func (s StatementType) String() string {
+	return [...]string{
+		"Break",
+		"Continue",
+		"DoWhile",
+		"For",
+		"Emit",
+		"Expression",
+		"If",
+		"InlineAssembly",
+		"Placeholder",
+		"Return",
+		"Revert",
+		"Try",
+		"UncheckedBlock",
+		"VariableDeclaration",
+		"While",
+		"Require",
+		"Assert",
+		"FunctionCall",
+		"Authorize",
+		"Modify",
+	}[s]
+}
 
 type CFG struct {
 	EntryPoints []*Function `json:"entryPoints"`
 	Blocks      []*Block    `json:"blocks"`
 	Edges       []*Edge     `json:"edges"`
+	symbolTable *ST.GlobalSymbolTable
 }
 
 type Function struct {
-	Name      string `json:"name"`
-	Successor *Block `json:"successor"`
+	Name  string `json:"name"`
+	Block *Block
 }
 
 type Block struct {
-	ID                int         `json:"id"`
-	Statements        []Statement `json:"statements"`
-	SuccessorsEdges   []*Edge     `json:"successors"`
-	PredecessorsEdges []*Edge     `json:"predecessors"`
+	ID                int          `json:"id"`
+	Namespace         ST.Namespace `json:"namespace"`
+	Statements        []*Statement `json:"statements"`
+	SuccessorsEdges   []*Edge      `json:"successors"`
+	PredecessorsEdges []*Edge      `json:"predecessors"`
+}
+
+func (b *Block) Collect(s *Statement) {
+	b.Statements = append(b.Statements, s)
+}
+
+func (b *Block) AddSuccessorEdge(e *Edge) {
+	b.SuccessorsEdges = append(b.SuccessorsEdges, e)
 }
 
 type Edge struct {
@@ -53,7 +101,6 @@ const (
 )
 
 type Statement struct {
-	Type       StatementType
-	Content    string
-	Attributes map[string]interface{}
+	ASTNode AST.Common `json:"astNode"`
+	Type    StatementType
 }

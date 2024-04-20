@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"txtracker/pkg/cfg"
+	CFG "txtracker/pkg/cfg"
 	"txtracker/pkg/compiler"
 	"txtracker/pkg/filehandler"
 	"txtracker/pkg/logger"
@@ -41,10 +41,10 @@ func main() {
 		astFilePath := path + ".ast.json"
 		root := parser.ParseAST_JSON(astFilePath)
 		symbol_table := symboltable.NewGlobalSymbolTable(root)
-		cfg.NewCFG(root, symbol_table)
+		cfg := CFG.NewCFG(root, symbol_table)
 
-		ast_printer := printer.NewASTPrinter(root)
-		ast_printer.PrintAST()
+		cfg_printer := printer.NewCFGPrinter(cfg)
+		cfg_printer.Print()
 	}
 
 }

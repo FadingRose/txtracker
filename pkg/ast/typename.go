@@ -1,7 +1,7 @@
 package ast
 
 // TypeName: ArrayTypeName | ElementaryTypeName | FunctionTypeName | Mapping | UserDefinedTypeName
-type TypeName *Common
+type TypeName = *Common
 
 type ElementaryTypeName struct {
 	Common
@@ -84,5 +84,35 @@ func (m *Mapping) Constructor(data *map[string]interface{}) {
 	if data, ok := (*data)["valueType"].(map[string]interface{}); ok {
 		m.ValueType = NodeFactory(data)
 		m.ValueType.ASTNode.Constructor(&data)
+	}
+}
+
+type ArrayTypeName struct {
+	BaseType         TypeName         `json:"baseType"`
+	Length           Expression       `json:"length"`
+	TypeDescriptions TypeDescriptions `json:"typeDescriptions"`
+}
+
+func (a *ArrayTypeName) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"BaseType":         a.BaseType,
+		"Length":           a.Length,
+		"TypeDescriptions": a.TypeDescriptions,
+	}
+}
+
+func (a *ArrayTypeName) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["baseType"].(map[string]interface{}); ok {
+		a.BaseType = NodeFactory(data)
+		a.BaseType.ASTNode.Constructor(&data)
+	}
+
+	if data, ok := (*data)["length"].(map[string]interface{}); ok {
+		a.Length = NodeFactory(data)
+		a.Length.ASTNode.Constructor(&data)
+	}
+
+	if data, ok := (*data)["typeDescriptions"].(map[string]interface{}); ok {
+		a.TypeDescriptions.Constructor(&data)
 	}
 }

@@ -1,7 +1,59 @@
 package ast
 
 // Expression: Assignment | BinaryOperation | Conditional | ElementaryTypeNameExpression | FunctionCall | FunctionCallOptions | Identifier | IndexAccess | IndexRangeAccess | Literal | MemberAccess | NewExpression | TupleExpression | UnaryOperation
-type Expression *Common
+type Expression = *Common
+
+func (e *Common) RetrieveVarSymbols() []string {
+	var symbols []string
+	switch (*e).NodeType {
+	case "Assignment":
+		assign := (*e).ASTNode.(*Assignment)
+		symbols = append(symbols, assign.LeftHandSide.RetrieveVarSymbols()...)
+		symbols = append(symbols, assign.RightHandSide.RetrieveVarSymbols()...)
+	case "BinaryOperation":
+		binOp := (*e).ASTNode.(*BinaryOperation)
+		symbols = append(symbols, binOp.LeftExpression.RetrieveVarSymbols()...)
+		symbols = append(symbols, binOp.RightExpression.RetrieveVarSymbols()...)
+	// case "Conditional":
+	// 	cond := (*e).ASTNode.(*Conditional)
+	// 	symbols = append(symbols, cond.TrueExpression.RetrieveVarSymbols()...)
+	// 	symbols = append(symbols, cond.FalseExpression.RetrieveVarSymbols()...)
+	case "ElementaryTypeNameExpression":
+		// do nothing
+	case "FunctionCall":
+		funCall := (*e).ASTNode.(*FunctionCall)
+		symbols = append(symbols, funCall.Expression.RetrieveVarSymbols()...)
+		for _, arg := range funCall.Arguments {
+			symbols = append(symbols, arg.RetrieveVarSymbols()...)
+		}
+	case "FunctionCallOptions":
+		// do nothing
+	case "Identifier":
+		ident := (*e).ASTNode.(*Identifier)
+		symbols = append(symbols, ident.Name)
+	case "IndexAccess":
+		index := (*e).ASTNode.(*IndexAccess)
+		symbols = append(symbols, index.BaseExpression.RetrieveVarSymbols()...)
+		if index.IndexExpression != nil {
+			symbols = append(symbols, index.IndexExpression.RetrieveVarSymbols()...)
+		}
+	case "IndexRangeAccess":
+		// do nothing
+	case "Literal":
+		// do nothing
+	case "MemberAccess":
+		member := (*e).ASTNode.(*MemberAccess)
+		symbols = append(symbols, member.Expression.RetrieveVarSymbols()...)
+	case "NewExpression":
+		// do nothing
+	case "TupleExpression":
+		// do nothing
+		// case "UnaryOperation":
+		// 	unary := (*e).ASTNode.(*UnaryOperation)
+		// 	symbols = append(symbols, unary.SubExpression.RetrieveVarSymbols()...)
+	}
+	return symbols
+}
 
 type BinaryOperation struct {
 	Common
@@ -425,5 +477,192 @@ func (i *IndexAccess) Constructor(data *map[string]interface{}) {
 	if data, ok := (*data)["typeDescriptions"].(map[string]interface{}); ok {
 		i.TypeDescriptions = TypeDescriptions{}
 		i.TypeDescriptions.Constructor(&data)
+	}
+}
+
+type ElementaryTypeNameExpression struct {
+	Common
+	ArgumentTypes    []TypeDescriptions `json:"argumentTypes"` // TypeDescriptions[] | null
+	IsConstant       bool               `json:"isConstant"`
+	IsLValue         bool               `json:"isLValue"`
+	IsPure           bool               `json:"isPure"`
+	LValueRequested  bool               `json:"lValueRequested"`
+	TypeDescriptions TypeDescriptions   `json:"typeDescriptions"` // TypeDescriptions | null
+	TypeName         ElementaryTypeName `json:"typeName"`
+}
+
+func (e *ElementaryTypeNameExpression) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"ArgumentTypes":    e.ArgumentTypes,
+		"IsConstant":       e.IsConstant,
+		"IsLValue":         e.IsLValue,
+		"IsPure":           e.IsPure,
+		"LValueRequested":  e.LValueRequested,
+		"TypeDescriptions": e.TypeDescriptions,
+		"TypeName":         e.TypeName,
+	}
+}
+
+func (e *ElementaryTypeNameExpression) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["argumentTypes"].([]interface{}); ok {
+		for _, v := range data {
+			v := v.(map[string]interface{})
+			td := TypeDescriptions{}
+			td.Constructor(&v)
+			e.ArgumentTypes = append(e.ArgumentTypes, td)
+		}
+	}
+
+	if data, ok := (*data)["isConstant"].(bool); ok {
+		e.IsConstant = data
+	}
+
+	if data, ok := (*data)["isLValue"].(bool); ok {
+		e.IsLValue = data
+	}
+
+	if data, ok := (*data)["isPure"].(bool); ok {
+		e.IsPure = data
+	}
+
+	if data, ok := (*data)["lValueRequested"].(bool); ok {
+		e.LValueRequested = data
+	}
+
+	if data, ok := (*data)["typeDescriptions"].(map[string]interface{}); ok {
+		e.TypeDescriptions.Constructor(&data)
+	}
+
+	if data, ok := (*data)["typeName"].(map[string]interface{}); ok {
+		e.TypeName = ElementaryTypeName{}
+		e.TypeName.Constructor(&data)
+	}
+}
+
+type TupleExpression struct {
+	Common
+	ArgumentTypes    []TypeDescriptions `json:"argumentTypes"` // TypeDescriptions[] | null
+	Components       []Expression       `json:"components"`
+	IsConstant       bool               `json:"isConstant"`
+	IsInlineArray    bool               `json:"isInlineArray"`
+	IsLValue         bool               `json:"isLValue"`
+	IsPure           bool               `json:"isPure"`
+	LValueRequested  bool               `json:"lValueRequested"`
+	TypeDescriptions TypeDescriptions   `json:"typeDescriptions"` // TypeDescriptions | null
+}
+
+func (t *TupleExpression) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"ArgumentTypes":    t.ArgumentTypes,
+		"Components":       t.Components,
+		"IsConstant":       t.IsConstant,
+		"IsInlineArray":    t.IsInlineArray,
+		"IsLValue":         t.IsLValue,
+		"IsPure":           t.IsPure,
+		"LValueRequested":  t.LValueRequested,
+		"TypeDescriptions": t.TypeDescriptions,
+	}
+}
+
+func (t *TupleExpression) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["argumentTypes"].([]interface{}); ok {
+		for _, v := range data {
+			v := v.(map[string]interface{})
+			td := TypeDescriptions{}
+			td.Constructor(&v)
+			t.ArgumentTypes = append(t.ArgumentTypes, td)
+		}
+	}
+
+	if data, ok := (*data)["components"].([]interface{}); ok {
+		for _, v := range data {
+			v := v.(map[string]interface{})
+			expr := NodeFactory(v)
+			expr.ASTNode.Constructor(&v)
+			t.Components = append(t.Components, expr)
+		}
+	}
+
+	if data, ok := (*data)["isConstant"].(bool); ok {
+		t.IsConstant = data
+	}
+
+	if data, ok := (*data)["isInlineArray"].(bool); ok {
+		t.IsInlineArray = data
+	}
+
+	if data, ok := (*data)["isLValue"].(bool); ok {
+		t.IsLValue = data
+	}
+
+	if data, ok := (*data)["isPure"].(bool); ok {
+		t.IsPure = data
+	}
+
+	if data, ok := (*data)["lValueRequested"].(bool); ok {
+		t.LValueRequested = data
+	}
+
+	if data, ok := (*data)["typeDescriptions"].(map[string]interface{}); ok {
+		t.TypeDescriptions.Constructor(&data)
+	}
+}
+
+type NewExpression struct {
+	Common
+	ArgumentTypes    []TypeDescriptions `json:"argumentTypes"` // TypeDescriptions[] | null
+	IsConstant       bool               `json:"isConstant"`
+	IsLValue         bool               `json:"isLValue"`
+	IsPure           bool               `json:"isPure"`
+	LValueRequested  bool               `json:"lValueRequested"`
+	TypeDescriptions TypeDescriptions   `json:"typeDescriptions"` // TypeDescriptions | null
+	TypeName         TypeName           `json:"typeName"`
+}
+
+func (n *NewExpression) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"ArgumentTypes":    n.ArgumentTypes,
+		"IsConstant":       n.IsConstant,
+		"IsLValue":         n.IsLValue,
+		"IsPure":           n.IsPure,
+		"LValueRequested":  n.LValueRequested,
+		"TypeDescriptions": n.TypeDescriptions,
+		"TypeName":         n.TypeName,
+	}
+}
+
+func (n *NewExpression) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["argumentTypes"].([]interface{}); ok {
+		for _, v := range data {
+			v := v.(map[string]interface{})
+			td := TypeDescriptions{}
+			td.Constructor(&v)
+			n.ArgumentTypes = append(n.ArgumentTypes, td)
+		}
+	}
+
+	if data, ok := (*data)["isConstant"].(bool); ok {
+		n.IsConstant = data
+	}
+
+	if data, ok := (*data)["isLValue"].(bool); ok {
+		n.IsLValue = data
+	}
+
+	if data, ok := (*data)["isPure"].(bool); ok {
+		n.IsPure = data
+	}
+
+	if data, ok := (*data)["lValueRequested"].(bool); ok {
+		n.LValueRequested = data
+	}
+
+	if data, ok := (*data)["typeDescriptions"].(map[string]interface{}); ok {
+		n.TypeDescriptions.Constructor(&data)
+	}
+
+	if data, ok := (*data)["typeName"].(map[string]interface{}); ok {
+		n.TypeName = NodeFactory(data)
+		n.TypeName.ASTNode.Constructor(&data)
 	}
 }

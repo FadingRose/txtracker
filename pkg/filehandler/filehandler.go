@@ -12,6 +12,9 @@ import (
 // filehandler.go:
 // 1. read smart contract file from dataset/contracts
 
+type SolidityCode string
+type EVMCode string
+
 type FileHandler interface {
 	GetContractList() ([]string, error)
 	GetContractSolPathList() []string

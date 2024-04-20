@@ -16,6 +16,14 @@ var astNodes = map[string]func() ASTNode{
 	"PragmaDirective":     func() ASTNode { return &PragmaDirective{} },
 	"FunctionDefinition":  func() ASTNode { return &FunctionDefinition{} },
 	"VariableDeclaration": func() ASTNode { return &VariableDeclaration{} },
+	"UsingForDirective":   func() ASTNode { return &UsingForDirective{} },
+
+	// Enum
+	"EnumDefinition": func() ASTNode { return &EnumDefinition{} },
+	"EnumValue":      func() ASTNode { return &EnumValue{} },
+
+	// Events
+	"EventDefinition": func() ASTNode { return &EventDefinition{} },
 
 	// Functions
 	"FunctionCall": func() ASTNode { return &FunctionCall{} },
@@ -25,6 +33,7 @@ var astNodes = map[string]func() ASTNode{
 
 	// Modifiers
 	"ModifierDefinition": func() ASTNode { return &ModifierDefinition{} },
+	"ModifierInvocation": func() ASTNode { return &ModifierInvocation{} },
 
 	// Statements
 	"Block":                        func() ASTNode { return &Block{} },
@@ -33,18 +42,27 @@ var astNodes = map[string]func() ASTNode{
 	"VariableDeclarationStatement": func() ASTNode { return &VariableDeclarationStatement{} },
 	"ExpressionStatement":          func() ASTNode { return &ExpressionStatement{} },
 	"PlaceholderStatement":         func() ASTNode { return &PlaceholderStatement{} },
+	"ForStatement":                 func() ASTNode { return &ForStatement{} },
+	"Break":                        func() ASTNode { return &Break{} },
 
 	// Expressions
-	"BinaryOperation": func() ASTNode { return &BinaryOperation{} },
-	"Identifier":      func() ASTNode { return &Identifier{} },
-	"Literal":         func() ASTNode { return &Literal{} },
-	"Assignment":      func() ASTNode { return &Assignment{} },
-	"MemberAccess":    func() ASTNode { return &MemberAccess{} },
-	"IndexAccess":     func() ASTNode { return &IndexAccess{} },
+	"BinaryOperation":              func() ASTNode { return &BinaryOperation{} },
+	"Identifier":                   func() ASTNode { return &Identifier{} },
+	"Literal":                      func() ASTNode { return &Literal{} },
+	"Assignment":                   func() ASTNode { return &Assignment{} },
+	"MemberAccess":                 func() ASTNode { return &MemberAccess{} },
+	"IndexAccess":                  func() ASTNode { return &IndexAccess{} },
+	"UnaryOperation":               func() ASTNode { return &UnaryOperation{} },
+	"ElementaryTypeNameExpression": func() ASTNode { return &ElementaryTypeNameExpression{} },
+	"TupleExpression":              func() ASTNode { return &TupleExpression{} },
+	"NewExpression":                func() ASTNode { return &NewExpression{} },
 
 	// TypeNames
-	"ElementaryTypeName": func() ASTNode { return &ElementaryTypeName{} },
-	"Mapping":            func() ASTNode { return &Mapping{} },
+	"ElementaryTypeName":  func() ASTNode { return &ElementaryTypeName{} },
+	"UserDefinedTypeName": func() ASTNode { return &UserDefinedTypeName{} },
+	"Mapping":             func() ASTNode { return &Mapping{} },
+	"StructDefinition":    func() ASTNode { return &StructDefinition{} },
+	"ArrayTypeName":       func() ASTNode { return &ArrayTypeName{} },
 }
 
 func commonFactory(data map[string]interface{}) (*Common, string) {

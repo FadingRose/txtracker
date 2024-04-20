@@ -18,6 +18,25 @@ type Symbol struct {
 
 type Namespace []string
 
+func NewNamespace() Namespace {
+	return make(Namespace, 0)
+}
+
+func (n Namespace) Push(name string) Namespace {
+	if name == "" {
+		// means a constructor or fallback function
+		return n
+	}
+	return append(n, name)
+}
+
+func (n Namespace) Pop() Namespace {
+	if len(n) == 0 {
+		return n
+	}
+	return n[:len(n)-1]
+}
+
 func (n Namespace) String() string {
 	return strings.Join(n, "::")
 }
@@ -62,6 +81,16 @@ func (gst *GlobalSymbolTable) InsertSymbol(symbol Symbol) {
 
 func (gst *GlobalSymbolTable) LookupSymbol(symbolName string) Symbol {
 	return gst.Table[symbolName]
+}
+
+// This function do NOT check namespace
+func (gst *GlobalSymbolTable) IsExistWithIdentifierOnly(varname string) bool {
+	for _, symbol := range gst.Table {
+		if symbol.Name() == varname {
+			return true
+		}
+	}
+	return false
 }
 
 func _findContractDefinition(root *ast.Common) []*ast.Common {

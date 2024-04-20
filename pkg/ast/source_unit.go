@@ -357,6 +357,14 @@ func (f *FunctionDefinition) Constructor(data *map[string]interface{}) {
 	}
 }
 
+func (f *FunctionDefinition) IsPublic() bool {
+	return f.Visibility == "public"
+}
+
+func (f *FunctionDefinition) IsExternal() bool {
+	return f.Visibility == "external"
+}
+
 type ModifierInvocation struct {
 	Common
 	Arguments    []Expression `json:"arguments"` // Expression[] || null
@@ -397,6 +405,7 @@ type FunctionCall struct {
 	Common
 	ArgumentTypes    []TypeDescriptions `json:"argumentTypes"`
 	Arguments        []Expression       `json:"arguments"`
+	Expression       Expression         `json:"expression"`
 	IsConstant       bool               `json:"isConstant"`
 	IsLValue         bool               `json:"isLValue"`
 	IsPure           bool               `json:"isPure"`
@@ -412,6 +421,7 @@ func (f *FunctionCall) Attributes() *map[string]interface{} {
 	return &map[string]interface{}{
 		"ArgumentTypes":    f.ArgumentTypes,
 		"Arguments":        f.Arguments,
+		"Expression":       f.Expression,
 		"IsConstant":       f.IsConstant,
 		"IsLValue":         f.IsLValue,
 		"IsPure":           f.IsPure,
@@ -443,6 +453,11 @@ func (f *FunctionCall) Constructor(data *map[string]interface{}) {
 			expr.ASTNode.Constructor(&v)
 			f.Arguments = append(f.Arguments, expr)
 		}
+	}
+
+	if data, ok := (*data)["expression"].(map[string]interface{}); ok {
+		f.Expression = NodeFactory(data)
+		f.Expression.ASTNode.Constructor(&data)
 	}
 
 	if data, ok := (*data)["isConstant"].(bool); ok {

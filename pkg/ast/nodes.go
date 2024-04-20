@@ -27,6 +27,7 @@ func (i *InheritanceSpecifier) Constructor(data *map[string]interface{}) {
 	}
 
 	if data, ok := (*data)["baseName"].(map[string]interface{}); ok {
+		i.BaseName = NodeFactory(data)
 		i.BaseName.ASTNode.Constructor(&data)
 	}
 }
@@ -221,5 +222,109 @@ func (o *OverrideSpecifier) Constructor(data *map[string]interface{}) {
 			override.ASTNode.Constructor(&v)
 			o.Overrides = append(o.Overrides, override)
 		}
+	}
+}
+
+type StructDefinition struct {
+	Common
+	CanonicaName  string `json:"canonicalName"`
+	Documentation StructuredDocumentation
+	Members       []VariableDeclaration `json:"members"`
+	Name          string                `json:"name"`
+	NameLocation  string                `json:"nameLocation"`
+	Scope         int                   `json:"scope"`
+	Visibility    Visibility            `json:"visibility"`
+}
+
+func (s *StructDefinition) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"CanonicaName":  s.CanonicaName,
+		"Documentation": s.Documentation,
+		"Members":       s.Members,
+		"Name":          s.Name,
+		"NameLocation":  s.NameLocation,
+		"Scope":         s.Scope,
+		"Visibility":    s.Visibility,
+	}
+}
+
+func (s *StructDefinition) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["canonicalName"].(string); ok {
+		s.CanonicaName = data
+	}
+
+	if data, ok := (*data)["documentation"].(map[string]interface{}); ok {
+		s.Documentation = *NodeFactory(data).ToStructuredDocumentation()
+		s.Documentation.ASTNode.Constructor(&data)
+	}
+
+	if data, ok := (*data)["members"].([]interface{}); ok {
+		s.Members = make([]VariableDeclaration, len(data))
+		for cnt, v := range data {
+			v := v.(map[string]interface{})
+			s.Members[cnt].Constructor(&v)
+		}
+	}
+
+	if data, ok := (*data)["name"].(string); ok {
+		s.Name = data
+	}
+
+	if data, ok := (*data)["nameLocation"].(string); ok {
+		s.NameLocation = data
+	}
+
+	if data, ok := (*data)["scope"].(int); ok {
+		s.Scope = data
+	}
+
+	if data, ok := (*data)["visibility"].(string); ok {
+		s.Visibility = Visibility(data)
+	}
+}
+
+type FunctionList struct {
+	Function   IdentifierPath
+	Definition IdentifierPath
+	Operator   FunctionListOperator
+}
+
+type UsingForDirective struct {
+	Common
+	FunctionList FunctionList // WARNING: This is a struct, not a list
+	Global       bool
+	LibraryName  IdentifierPath
+	TypeName     TypeName
+}
+
+func (u *UsingForDirective) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"FunctionList": u.FunctionList,
+		"Global":       u.Global,
+		"LibraryName":  u.LibraryName,
+		"TypeName":     u.TypeName,
+	}
+}
+
+func (u *UsingForDirective) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["functionList"].(map[string]interface{}); ok {
+		u.FunctionList.Function.Constructor(&data)
+		u.FunctionList.Definition.Constructor(&data) // WARNING: This is a struct, not a list, may trigger error
+		if data, ok := data["operator"].(string); ok {
+			u.FunctionList.Operator = FunctionListOperator(data)
+		}
+	}
+
+	if data, ok := (*data)["global"].(bool); ok {
+		u.Global = data
+	}
+
+	if data, ok := (*data)["libraryName"].(map[string]interface{}); ok {
+		u.LibraryName.Constructor(&data)
+	}
+
+	if data, ok := (*data)["typeName"].(map[string]interface{}); ok {
+		u.TypeName = NodeFactory(data)
+		u.TypeName.ASTNode.Constructor(&data)
 	}
 }

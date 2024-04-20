@@ -1,5 +1,7 @@
 package txtracker
 
+import CFG "txtracker/pkg/cfg"
+
 type TxSeQuence struct {
 	Name string
 	Tx   []Tx
@@ -7,5 +9,5 @@ type TxSeQuence struct {
 
 type Tx struct {
 	Name       string
-	Statements []Statement
+	Statements []CFG.Statement
 }

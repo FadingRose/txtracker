@@ -106,6 +106,48 @@ const (
 	AssignmentOperator_ShiftRight     AssignmentOperator = ">>="
 )
 
+type UnaryOperator string
+
+const (
+	UnaryOperator_LogicalNot UnaryOperator = "!"
+	UnaryOperator_BitwiseNot UnaryOperator = "~"
+	UnaryOperator_Minus      UnaryOperator = "-"
+	UnaryOperator_Increment  UnaryOperator = "++"
+	UnaryOperator_Decrement  UnaryOperator = "--"
+	UnaryOperator_Delete     UnaryOperator = "delete"
+)
+
+type FunctionListOperator string
+
+// "+" | "-" | "*" | "/" | "%" | "!=" | "==" | "<" | "<=" | ">" | ">=" | "^" | "&" | "|" | "~"
+const (
+	FunctionListOperator_Addition       FunctionListOperator = "+"
+	FunctionListOperator_Subtraction    FunctionListOperator = "-"
+	FunctionListOperator_Multiplication FunctionListOperator = "*"
+	FunctionListOperator_Division       FunctionListOperator = "/"
+	FunctionListOperator_Modulo         FunctionListOperator = "%"
+	//"!="
+	FunctionListOperator_StrictNotEqual FunctionListOperator = "!="
+	//"=="
+	FunctionListOperator_StrictEqual FunctionListOperator = "=="
+	//"<"
+	FunctionListOperator_LessThan FunctionListOperator = "<"
+	//"<="
+	FunctionListOperator_LessThanOrEqual FunctionListOperator = "<="
+	//">"
+	FunctionListOperator_GreaterThan FunctionListOperator = ">"
+	//">="
+	FunctionListOperator_GreaterThanOrEqual FunctionListOperator = ">="
+	//"^"
+	FunctionListOperator_BitwiseXor FunctionListOperator = "^"
+	//"&"
+	FunctionListOperator_BitwiseAnd FunctionListOperator = "&"
+	//"|"
+	FunctionListOperator_BitwiseOr FunctionListOperator = "|"
+	//"~"
+	FunctionListOperator_BitwiseNot FunctionListOperator = "~"
+)
+
 type LiteralKind string
 
 const (
