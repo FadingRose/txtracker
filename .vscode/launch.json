@@ -25,7 +25,7 @@
             "mode": "debug",
             "program": "${workspaceFolder}/cmd/txtracker/main.go",
             "args": [
-                "for.sol"
+                "0x0a0e40db3bc35ea2242d4475a67454078f83a9bf.sol"
             ]
         },
         {

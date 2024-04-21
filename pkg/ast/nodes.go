@@ -328,3 +328,75 @@ func (u *UsingForDirective) Constructor(data *map[string]interface{}) {
 		u.TypeName.ASTNode.Constructor(&data)
 	}
 }
+
+type Conditional struct {
+	Common
+	ArgumentTypes    []TypeDescriptions `json:"argumentTypes"`
+	Condition        Expression         `json:"condition"`
+	FalseExpression  Expression         `json:"falseExpression"`
+	IsConstant       bool               `json:"isConstant"`
+	IsLValue         bool               `json:"isLValue"`
+	IsPure           bool               `json:"isPure"`
+	LValueRequested  bool               `json:"lValueRequested"`
+	TrueExpression   Expression         `json:"trueExpression"`
+	TypeDescriptions TypeDescriptions   `json:"typeDescriptions"`
+}
+
+func (c *Conditional) Attributes() *map[string]interface{} {
+	return &map[string]interface{}{
+		"ArgumentTypes":    c.ArgumentTypes,
+		"Condition":        c.Condition,
+		"FalseExpression":  c.FalseExpression,
+		"IsConstant":       c.IsConstant,
+		"IsLValue":         c.IsLValue,
+		"IsPure":           c.IsPure,
+		"LValueRequested":  c.LValueRequested,
+		"TrueExpression":   c.TrueExpression,
+		"TypeDescriptions": c.TypeDescriptions,
+	}
+}
+
+func (c *Conditional) Constructor(data *map[string]interface{}) {
+	if data, ok := (*data)["argumentTypes"].([]interface{}); ok {
+		c.ArgumentTypes = make([]TypeDescriptions, len(data))
+		for cnt, v := range data {
+			v := v.(map[string]interface{})
+			c.ArgumentTypes[cnt].Constructor(&v)
+		}
+	}
+
+	if data, ok := (*data)["condition"].(map[string]interface{}); ok {
+		c.Condition = NodeFactory(data)
+		c.Condition.ASTNode.Constructor(&data)
+	}
+
+	if data, ok := (*data)["falseExpression"].(map[string]interface{}); ok {
+		c.FalseExpression = NodeFactory(data)
+		c.FalseExpression.ASTNode.Constructor(&data)
+	}
+
+	if data, ok := (*data)["isConstant"].(bool); ok {
+		c.IsConstant = data
+	}
+
+	if data, ok := (*data)["isLValue"].(bool); ok {
+		c.IsLValue = data
+	}
+
+	if data, ok := (*data)["isPure"].(bool); ok {
+		c.IsPure = data
+	}
+
+	if data, ok := (*data)["lValueRequested"].(bool); ok {
+		c.LValueRequested = data
+	}
+
+	if data, ok := (*data)["trueExpression"].(map[string]interface{}); ok {
+		c.TrueExpression = NodeFactory(data)
+		c.TrueExpression.ASTNode.Constructor(&data)
+	}
+
+	if data, ok := (*data)["typeDescriptions"].(map[string]interface{}); ok {
+		c.TypeDescriptions.Constructor(&data)
+	}
+}

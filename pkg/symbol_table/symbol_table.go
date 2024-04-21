@@ -11,9 +11,10 @@ type GlobalSymbolTable struct {
 }
 
 type Symbol struct {
-	Namespace Namespace
-	Type      SymbolType
-	Arributes map[string]interface{}
+	Namespace  Namespace
+	Type       SymbolType
+	Identifier string
+	Arributes  map[string]interface{}
 }
 
 type Namespace []string
@@ -22,33 +23,28 @@ func NewNamespace() Namespace {
 	return make(Namespace, 0)
 }
 
-func (n Namespace) Push(name string) Namespace {
-	if name == "" {
-		// means a constructor or fallback function
-		return n
+func (n *Namespace) Push(s string) *Namespace {
+	*n = append(*n, s)
+	return n
+}
+
+func (n *Namespace) Pop() Namespace {
+	if len(*n) == 0 {
+		return *n
 	}
-	return append(n, name)
+	*n = (*n)[:len(*n)-1]
+	return *n
 }
 
-func (n Namespace) Pop() Namespace {
-	if len(n) == 0 {
-		return n
-	}
-	return n[:len(n)-1]
-}
-
-func (n Namespace) String() string {
-	return strings.Join(n, "::")
-}
-
-func (s Symbol) Name() string {
-	return s.Namespace[len(s.Namespace)-1]
+func (n *Namespace) String() string {
+	return strings.Join(*n, "::")
 }
 
 type SymbolType int
 
 const (
 	StateVariable SymbolType = iota
+	LocalVariable
 	Function
 	Constructor
 	Fallback
@@ -86,7 +82,7 @@ func (gst *GlobalSymbolTable) LookupSymbol(symbolName string) Symbol {
 // This function do NOT check namespace
 func (gst *GlobalSymbolTable) IsExistWithIdentifierOnly(varname string) bool {
 	for _, symbol := range gst.Table {
-		if symbol.Name() == varname {
+		if symbol.Identifier == varname {
 			return true
 		}
 	}

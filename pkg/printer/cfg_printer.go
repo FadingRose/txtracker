@@ -36,5 +36,19 @@ func (p *CFGPrinter) printBlock(b *CFG.Block) {
 
 func (p *CFGPrinter) printStatement(s *CFG.Statement) {
 	tp := s.Type
-	fmt.Println(tp.String())
+
+	fmt.Print(tp.String())
+	fmt.Print(" ")
+	if s.Declare != nil {
+		fmt.Print(
+			func() string {
+				var res string
+				for _, d := range s.Declare {
+					res += "[" + d.Identifier + "]" + " "
+				}
+				return res
+			}(),
+		)
+	}
+	fmt.Println()
 }

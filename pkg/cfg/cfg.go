@@ -9,6 +9,7 @@ import (
 func NewCFG(root *AST.Common, symbolTable *ST.GlobalSymbolTable) *CFG {
 	cfg := &CFG{
 		symbolTable: symbolTable,
+		Visitor:     NewVisitor(),
 	}
 	cfg.EntryPoints = cfg._constructEntryFuncs(root)
 
@@ -40,33 +41,37 @@ func (cfg *CFG) _findContractDefinition(root *AST.Common) []*AST.Common {
 
 func (cfg *CFG) _findEntryFunc(contractDef *AST.Common) []*Function {
 	var entryFuncs []*Function
-	namespace := ST.NewNamespace()
-	namespace.Push(contractDef.ASTNode.(*AST.ContractDefinition).Name)
+	contractName := contractDef.ASTNode.(*AST.ContractDefinition).Name
+	cfg.Visitor.EnterNamespace(contractName)
 	for _, node := range contractDef.Children {
 
 		if node.NodeType == "FunctionDefinition" {
 			funcDef := node.ASTNode.(*AST.FunctionDefinition)
 
 			if funcDef.IsPublic() || funcDef.IsExternal() {
-				namespace.Push(funcDef.Name)
+				if !funcDef.IsImplemented() {
+					continue
+				}
+				cfg.Visitor.EnterNamespace(funcDef.Name)
 				entryFuncs = append(entryFuncs, &Function{
 					Name:  funcDef.Name,
-					Block: cfg._constructFuncLevelBlock(funcDef, namespace),
+					Block: cfg._constructFuncLevelBlock(funcDef),
 				})
-				namespace.Pop()
+				cfg.Visitor.ExitNamespace()
 			}
 
 		}
 
 	}
+	cfg.Visitor.ExitNamespace()
 
 	return entryFuncs
 }
 
-func (cfg *CFG) _constructFuncLevelBlock(funcDef *AST.FunctionDefinition, namespace ST.Namespace) *Block {
+func (cfg *CFG) _constructFuncLevelBlock(funcDef *AST.FunctionDefinition) *Block {
 	block := &Block{
 		ID:        funcDef.ID,
-		Namespace: namespace,
+		Namespace: *cfg.Visitor.CurrentNamespace,
 	}
 
 	for _, stmt := range funcDef.Body.Statements {
@@ -77,10 +82,61 @@ func (cfg *CFG) _constructFuncLevelBlock(funcDef *AST.FunctionDefinition, namesp
 }
 
 func (cfg *CFG) _constructStatement(stmt *AST.Common) *Statement {
+
+	_type := cfg._getStatementType(stmt)
+	modify, depends, declare := cfg._getModifyAndDependsSymbols(stmt, _type)
 	return &Statement{
 		ASTNode: *stmt,
-		Type:    cfg._getStatementType(stmt),
+		Type:    _type,
+		Modify:  modify,
+		Depends: depends,
+		Declare: declare,
 	}
+}
+
+// returns the symbols that are modified and depends on the given variable declaration statement
+func (cfg *CFG) _getModifyAndDependsSymbols(stmt *AST.Common, _type StatementType) ([]ST.Symbol, []ST.Symbol, []ST.Symbol) {
+	var modify, depends, declare []ST.Symbol
+	switch _type {
+	case VariableDeclaration:
+		cfg._getModifyAndDependsSymbolsForVariableDeclaration(stmt, &modify, &depends, &declare)
+	case Assert:
+		cfg._getModifyAndDependsSymbolsForAssert(stmt, &modify, &depends, &declare)
+	case Require:
+		cfg._getModifyAndDependsSymbolsForRequire(stmt, &modify, &depends, &declare)
+	case FunctionCall:
+		cfg._getModifyAndDependsSymbolsForFunctionCall(stmt, &modify, &depends, &declare)
+	}
+	return modify, depends, declare
+}
+
+func (cfg *CFG) _getModifyAndDependsSymbolsForVariableDeclaration(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+	// stmt.NodeType() == "VariableDeclareStatement"
+	declarations, statevars := stmt.ASTNode.(*AST.VariableDeclarationStatement).GetDeclarations()
+	for i, declaration := range declarations {
+		decl := &ST.Symbol{
+			Namespace:  *cfg.Visitor.CurrentNamespace,
+			Identifier: declaration,
+			Type: func() ST.SymbolType {
+				if statevars[i] {
+					return ST.StateVariable
+				} else {
+					return ST.LocalVariable
+				}
+			}(),
+		}
+		*declare = append(*declare, *decl)
+	}
+}
+
+func (cfg *CFG) _getModifyAndDependsSymbolsForAssert(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+}
+
+func (cfg *CFG) _getModifyAndDependsSymbolsForRequire(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+}
+
+func (cfg *CFG) _getModifyAndDependsSymbolsForFunctionCall(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+
 }
 
 func (cfg *CFG) _getStatementType(stmt *AST.Common) StatementType {

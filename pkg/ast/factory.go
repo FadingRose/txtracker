@@ -18,6 +18,9 @@ var astNodes = map[string]func() ASTNode{
 	"VariableDeclaration": func() ASTNode { return &VariableDeclaration{} },
 	"UsingForDirective":   func() ASTNode { return &UsingForDirective{} },
 
+	// Conditional
+	"Conditional": func() ASTNode { return &Conditional{} },
+
 	// Enum
 	"EnumDefinition": func() ASTNode { return &EnumDefinition{} },
 	"EnumValue":      func() ASTNode { return &EnumValue{} },

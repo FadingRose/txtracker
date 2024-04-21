@@ -63,6 +63,25 @@ type CFG struct {
 	Blocks      []*Block    `json:"blocks"`
 	Edges       []*Edge     `json:"edges"`
 	symbolTable *ST.GlobalSymbolTable
+	Visitor     *Visitor
+}
+
+type Visitor struct {
+	CurrentNamespace *ST.Namespace
+}
+
+func NewVisitor() *Visitor {
+	return &Visitor{
+		CurrentNamespace: &ST.Namespace{},
+	}
+}
+
+func (v *Visitor) EnterNamespace(namespace string) {
+	v.CurrentNamespace.Push(namespace)
+}
+
+func (v *Visitor) ExitNamespace() {
+	v.CurrentNamespace.Pop()
 }
 
 type Function struct {
@@ -103,4 +122,7 @@ const (
 type Statement struct {
 	ASTNode AST.Common `json:"astNode"`
 	Type    StatementType
+	Modify  []ST.Symbol
+	Depends []ST.Symbol
+	Declare []ST.Symbol
 }

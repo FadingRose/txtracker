@@ -365,6 +365,10 @@ func (f *FunctionDefinition) IsExternal() bool {
 	return f.Visibility == "external"
 }
 
+func (f *FunctionDefinition) IsImplemented() bool {
+	return f.Implemented
+}
+
 type ModifierInvocation struct {
 	Common
 	Arguments    []Expression `json:"arguments"` // Expression[] || null

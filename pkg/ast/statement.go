@@ -107,9 +107,20 @@ func (r *Return) DescribeStatement() string {
 type VariableDeclarationStatement struct {
 	Common
 	Assignments   []int                   `json:"assignments"`  // int[] | null
-	Declarations  []*Common               `json:"declarations"` // VariableDeclaration
+	Declarations  []*VariableDeclaration  `json:"declarations"` // VariableDeclaration
 	Documentation StructuredDocumentation `json:"documentation"`
 	InitialValue  Expression              `json:"initialValue"` // Expression | null
+}
+
+func (v *VariableDeclarationStatement) GetDeclarations() ([]string, []bool) {
+	var declarations []string
+	var statevariable []bool
+	for _, vd := range v.Declarations {
+		declaration, state := vd.GetDeclaration()
+		declarations = append(declarations, declaration)
+		statevariable = append(statevariable, state)
+	}
+	return declarations, statevariable
 }
 
 func (v *VariableDeclarationStatement) Attributes() *map[string]interface{} {
@@ -130,10 +141,11 @@ func (v *VariableDeclarationStatement) Constructor(data *map[string]interface{})
 	}
 
 	if data, ok := (*data)["declarations"].([]interface{}); ok {
+		v.Declarations = make([]*VariableDeclaration, 0)
 		for _, dt := range data {
 			dt := dt.(map[string]interface{})
-			vd := NodeFactory(dt)
-			vd.ASTNode.Constructor(&dt)
+			vd := &VariableDeclaration{}
+			vd.Constructor(&dt)
 			v.Declarations = append(v.Declarations, vd)
 		}
 	}
@@ -170,6 +182,10 @@ type VariableDeclaration struct {
 	TypeName         TypeName                `json:"typeName"`         // TypeName
 	Value            Expression              `json:"value"`            // Expression | null
 	Visibility       Visibility              `json:"visibility"`       // string
+}
+
+func (v *VariableDeclaration) GetDeclaration() (string, bool) {
+	return v.Name, v.StateVariable
 }
 
 func (v *VariableDeclaration) Attributes() *map[string]interface{} {
