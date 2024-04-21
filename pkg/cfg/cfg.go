@@ -1,6 +1,7 @@
 package cfg
 
 import (
+	"strings"
 	AST "txtracker/pkg/ast"
 	"txtracker/pkg/logger"
 	ST "txtracker/pkg/symbol_table"
@@ -126,6 +127,53 @@ func (cfg *CFG) _getModifyAndDependsSymbolsForVariableDeclaration(stmt *AST.Comm
 			}(),
 		}
 		*declare = append(*declare, *decl)
+		if initialValue := stmt.ASTNode.(*AST.VariableDeclarationStatement).GetInitialValue(); initialValue != nil {
+			//fmt.Println("InitialValue:", initialValue)
+			extractSymbolsFromExpression(initialValue, depends)
+		}
+
+	}
+
+}
+
+// recrusively extract symbols from the given expression
+func extractSymbolsFromExpression(expr *AST.Common, symbols *[]ST.Symbol) {
+	if expr == nil {
+		return
+	}
+
+	switch expr.NodeType {
+	case "Identifier":
+		*symbols = append(*symbols, ST.Symbol{
+			Namespace:  nil,
+			Identifier: expr.ASTNode.(*AST.Identifier).Name,
+			Type: func() ST.SymbolType {
+				ts := expr.ASTNode.(*AST.Identifier).TypeDescriptions.TypeString
+				// ts start with "function" means it is a function
+				if strings.Split(ts, " ")[0] == "function" {
+					return ST.Function
+				}
+				return ST.Unknown
+			}(), // check the symbol table
+		})
+		return
+	case "IndexAccess":
+		extractSymbolsFromExpression(expr.ASTNode.(*AST.IndexAccess).BaseExpression, symbols)
+		extractSymbolsFromExpression(expr.ASTNode.(*AST.IndexAccess).IndexExpression, symbols)
+	case "MemberAccess":
+		extractSymbolsFromExpression(expr.ASTNode.(*AST.MemberAccess).Expression, symbols)
+	case "BinaryOperation":
+		extractSymbolsFromExpression(expr.ASTNode.(*AST.BinaryOperation).LeftExpression, symbols)
+		extractSymbolsFromExpression(expr.ASTNode.(*AST.BinaryOperation).RightExpression, symbols)
+	case "FunctionCall":
+		for _, arg := range expr.ASTNode.(*AST.FunctionCall).Arguments {
+			extractSymbolsFromExpression(arg, symbols)
+		}
+		extractSymbolsFromExpression(expr.ASTNode.(*AST.FunctionCall).Expression, symbols)
+	case "UnaryOperation":
+		extractSymbolsFromExpression(expr.ASTNode.(*AST.UnaryOperation).SubExpression, symbols)
+	default:
+		logger.Warning.Println("Unhandle expression type:", expr.NodeType)
 	}
 }
 
@@ -133,6 +181,11 @@ func (cfg *CFG) _getModifyAndDependsSymbolsForAssert(stmt *AST.Common, modify, d
 }
 
 func (cfg *CFG) _getModifyAndDependsSymbolsForRequire(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+	arguents := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Arguments
+	for _, arg := range arguents {
+		extractSymbolsFromExpression(arg, depends)
+	}
+	// extractSymbolsFromExpression(stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Expression, depends)
 }
 
 func (cfg *CFG) _getModifyAndDependsSymbolsForFunctionCall(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {

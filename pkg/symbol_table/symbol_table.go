@@ -50,6 +50,7 @@ const (
 	Fallback
 	Receive
 	FreeFunction
+	Unknown
 )
 
 func NewGlobalSymbolTable(root *ast.Common) *GlobalSymbolTable {

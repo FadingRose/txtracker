@@ -123,6 +123,13 @@ func (v *VariableDeclarationStatement) GetDeclarations() ([]string, []bool) {
 	return declarations, statevariable
 }
 
+func (v *VariableDeclarationStatement) GetInitialValue() Expression {
+	if v.InitialValue == nil {
+		return nil
+	}
+	return v.InitialValue
+}
+
 func (v *VariableDeclarationStatement) Attributes() *map[string]interface{} {
 	return &map[string]interface{}{
 		"Assignments":   v.Assignments,
