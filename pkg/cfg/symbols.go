@@ -10,33 +10,37 @@ import (
 // returns the symbols that are modified and depends on the given variable declaration statement
 func (cfg *CFG) _getModifyAndDependsSymbols(stmt *AST.Common, _type StatementType) ([]ST.Symbol, []ST.Symbol, []ST.Symbol) {
 	var modify, depends, declare []ST.Symbol
-	switch _type {
-	case VariableDeclaration:
-		cfg._getModifyAndDependsSymbolsForVariableDeclaration(stmt, &modify, &depends, &declare)
-	case Assert:
-		cfg._getModifyAndDependsSymbolsForAssert(stmt, &modify, &depends, &declare)
-	case Require:
-		cfg._getModifyAndDependsSymbolsForRequire(stmt, &modify, &depends, &declare)
-	case FunctionCall:
-		cfg._getModifyAndDependsSymbolsForFunctionCall(stmt, &modify, &depends, &declare)
-	case Assignment:
-		cfg._getModifyAndDependsSymbolsForAssignment(stmt, &modify, &depends, &declare)
-	case Return:
-		cfg._getModifyAndDependsSymbolsForReturn(stmt, &modify, &depends, &declare)
-	case Emit:
-		cfg._getSymbolsForEmit(stmt, &modify, &depends, &declare)
-	default:
+
+	handlers := map[StatementType]SymbolHandler{
+		VariableDeclaration: &VariableDeclarationHandler{},
+		Emit:                &EmitHandler{},
+		Return:              &ReturnHandler{},
+		Assignment:          &AssignmentHandler{},
+		Assert:              &AssertHandler{},
+		Require:             &RequireHandler{},
+		FunctionCall:        &FunctionCallHandler{},
+	}
+	if handler, ok := handlers[_type]; ok {
+		handler.GetSymbols(*cfg.Visitor.CurrentNamespace, stmt, &modify, &depends, &declare)
+	} else {
 		logger.Warning.Println("Unhandled statement type:", _type)
 	}
 	return modify, depends, declare
 }
 
-func (cfg *CFG) _getModifyAndDependsSymbolsForVariableDeclaration(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+type SymbolHandler interface {
+	GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends, declare *[]ST.Symbol)
+}
+
+type VariableDeclarationHandler struct {
+}
+
+func (h *VariableDeclarationHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
 	// stmt.NodeType() == "VariableDeclareStatement"
 	declarations, statevars := stmt.ASTNode.(*AST.VariableDeclarationStatement).GetDeclarations()
 	for i, declaration := range declarations {
 		decl := &ST.Symbol{
-			Namespace:  *cfg.Visitor.CurrentNamespace,
+			Namespace:  namespace,
 			Identifier: declaration,
 			Type: func() ST.SymbolType {
 				if statevars[i] {
@@ -56,6 +60,65 @@ func (cfg *CFG) _getModifyAndDependsSymbolsForVariableDeclaration(stmt *AST.Comm
 
 }
 
+type EmitHandler struct {
+}
+
+func (h *EmitHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends, declare *[]ST.Symbol) {
+	// stmt.NodeType() == "EmitStatement"
+	emit := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall)
+	*depends = append(*depends, ST.Symbol{
+		Namespace:  namespace,
+		Identifier: emit.Expression.ASTNode.(*AST.Identifier).Name + "()",
+		Type:       ST.Event,
+	})
+}
+
+type ReturnHandler struct {
+}
+
+func (h *ReturnHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+	// stmt.NodeType() == "Return"
+
+}
+
+type AssignmentHandler struct {
+}
+
+func (h *AssignmentHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+	// stmt.NodeType() == "ExpressionStatement"
+	assignment := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.Assignment)
+	extractSymbolsFromExpression(assignment.LeftHandSide, modify)
+	extractSymbolsFromExpression(assignment.RightHandSide, depends)
+}
+
+type AssertHandler struct {
+}
+
+func (h *AssertHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+}
+
+type RequireHandler struct {
+}
+
+func (h *RequireHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+	arguents := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Arguments
+	for _, arg := range arguents {
+		extractSymbolsFromExpression(arg, depends)
+	}
+	// extractSymbolsFromExpression(stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Expression, depends)
+}
+
+type FunctionCallHandler struct {
+}
+
+func (h *FunctionCallHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
+	arguments := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Arguments
+	for _, arg := range arguments {
+		extractSymbolsFromExpression(arg, depends)
+	}
+}
+
+// helper function:
 // recrusively extract symbols from the given expression
 func extractSymbolsFromExpression(expr *AST.Common, symbols *[]ST.Symbol) {
 	if expr == nil {
@@ -103,45 +166,5 @@ func extractSymbolsFromExpression(expr *AST.Common, symbols *[]ST.Symbol) {
 		return
 	default:
 		logger.Warning.Println("Unhandle expression type:", expr.NodeType)
-	}
-}
-
-func (cfg *CFG) _getSymbolsForEmit(stmt *AST.Common, modify, depends, declare *[]ST.Symbol) {
-	// stmt.NodeType() == "EmitStatement"
-	emit := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall)
-	*depends = append(*depends, ST.Symbol{
-		Namespace:  *cfg.Visitor.CurrentNamespace,
-		Identifier: emit.Expression.ASTNode.(*AST.Identifier).Name + "()",
-		Type:       ST.Event,
-	})
-}
-
-func (cfg *CFG) _getModifyAndDependsSymbolsForReturn(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
-	// stmt.NodeType() == "Return"
-
-}
-
-func (cfg *CFG) _getModifyAndDependsSymbolsForAssignment(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
-	// stmt.NodeType() == "ExpressionStatement"
-	assignment := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.Assignment)
-	extractSymbolsFromExpression(assignment.LeftHandSide, modify)
-	extractSymbolsFromExpression(assignment.RightHandSide, depends)
-}
-
-func (cfg *CFG) _getModifyAndDependsSymbolsForAssert(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
-}
-
-func (cfg *CFG) _getModifyAndDependsSymbolsForRequire(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
-	arguents := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Arguments
-	for _, arg := range arguents {
-		extractSymbolsFromExpression(arg, depends)
-	}
-	// extractSymbolsFromExpression(stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Expression, depends)
-}
-
-func (cfg *CFG) _getModifyAndDependsSymbolsForFunctionCall(stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
-	arguments := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Arguments
-	for _, arg := range arguments {
-		extractSymbolsFromExpression(arg, depends)
 	}
 }
