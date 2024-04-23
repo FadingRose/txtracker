@@ -11,10 +11,11 @@ type GlobalSymbolTable struct {
 }
 
 type Symbol struct {
-	Namespace  Namespace
-	Type       SymbolType
-	Identifier string
-	Arributes  map[string]interface{}
+	Namespace      Namespace
+	Type           SymbolType
+	Identifier     string
+	IsFunctionCall bool
+	Arributes      map[string]interface{}
 }
 
 type Namespace []string
@@ -50,6 +51,7 @@ const (
 	Fallback
 	Receive
 	FreeFunction
+	Event
 	Unknown
 )
 

@@ -30,7 +30,7 @@ const (
 	// If statement's condition includes StateVariable
 	Authorize
 	// Modify: Write to state variable
-	Modify
+	Assignment
 )
 
 func (s StatementType) String() string {
@@ -85,8 +85,11 @@ func (v *Visitor) ExitNamespace() {
 }
 
 type Function struct {
-	Name  string `json:"name"`
-	Block *Block
+	Name       string `json:"name"`
+	SrcID      int    `json:"src"`
+	Block      *Block
+	Parameters []*ST.Symbol
+	// TODO add modifiers
 }
 
 type Block struct {

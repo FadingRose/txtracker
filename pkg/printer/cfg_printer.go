@@ -18,7 +18,13 @@ func NewCFGPrinter(cfg *CFG.CFG) *CFGPrinter {
 
 func (p *CFGPrinter) Print() {
 	for _, entry := range p.CFG.EntryPoints {
-		fmt.Println("Entry Point -->", entry.Name)
+		fmt.Println("Entry Point#", entry.SrcID, "--", func() string {
+			var res string
+			for _, p := range entry.Parameters {
+				res += "[" + p.Identifier + "]"
+			}
+			return res
+		}(), "-->", entry.Name)
 		p.printFunction(entry)
 		fmt.Println()
 	}
@@ -58,6 +64,24 @@ func (p *CFGPrinter) printStatement(s *CFG.Statement) {
 			}(),
 		)
 	}
+
+	if s.Modify != nil {
+		fmt.Print(
+			func() string {
+				var res string
+				for i, d := range s.Modify {
+					res += "[" + d.Identifier + "]"
+					if i == 0 {
+						res += "* "
+					}
+
+				}
+				return res
+			}(),
+		)
+
+	}
+
 	if s.Depends != nil {
 		fmt.Print(" <- " +
 			func() string {
