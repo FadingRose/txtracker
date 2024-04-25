@@ -3,7 +3,6 @@ package printer
 import (
 	"fmt"
 	CFG "txtracker/pkg/cfg"
-	symboltable "txtracker/pkg/symbol_table"
 )
 
 type CFGPrinter struct {
@@ -47,56 +46,6 @@ func (p *CFGPrinter) printStatement(s *CFG.Statement) {
 
 	fmt.Print(tp.String())
 	fmt.Print(" ")
-
-	if s.Declare != nil {
-		fmt.Print(
-			func() string {
-				var res string
-				for _, d := range s.Declare {
-					res += "[" + d.Identifier + func() string {
-						if d.Type == symboltable.Function {
-							return "()" + " "
-						}
-						return ""
-					}() + "]" + " "
-				}
-				return res
-			}(),
-		)
-	}
-
-	if s.Modify != nil {
-		fmt.Print(
-			func() string {
-				var res string
-				for i, d := range s.Modify {
-					res += "[" + d.Identifier + "]"
-					if i == 0 {
-						res += "* "
-					}
-
-				}
-				return res
-			}(),
-		)
-
-	}
-
-	if s.Depends != nil {
-		fmt.Print(" <- " +
-			func() string {
-				var res string
-				for _, d := range s.Depends {
-					res += "[" + d.Identifier + func() string {
-						if d.Type == symboltable.Function {
-							return "()"
-						}
-						return ""
-					}() + "]" + " "
-				}
-				return res
-			}(),
-		)
-	}
+	fmt.Print(CFG.StatementToString(s))
 	fmt.Println()
 }

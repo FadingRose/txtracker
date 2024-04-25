@@ -77,8 +77,12 @@ type ReturnHandler struct {
 }
 
 func (h *ReturnHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends *[]ST.Symbol, declare *[]ST.Symbol) {
-	// stmt.NodeType() == "Return"
-
+	expr := stmt.ASTNode.(*AST.Return).Expression
+	if expr.NodeType == "FunctionCall" {
+		extractFuncSymbols(namespace, expr, depends)
+	} else {
+		extractSymbolsFromExpression(expr, depends)
+	}
 }
 
 type AssignmentHandler struct {
@@ -116,9 +120,45 @@ func (h *FunctionCallHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Commo
 	for _, arg := range arguments {
 		extractSymbolsFromExpression(arg, depends)
 	}
+
+	funcRef := stmt.ASTNode.(*AST.ExpressionStatement).Expression.ASTNode.(*AST.FunctionCall).Expression
+
+	// Member access upgradeAgent.upgradeFrom(...)
+	if funcRef.NodeType == "MemberAccess" || funcRef.NodeType == "Identifier" {
+		extractFuncSymbols(namespace, funcRef, declare)
+	}
+
 }
 
 // helper function:
+// recrusively extract symbols from the given function reference
+func extractFuncSymbols(namespace ST.Namespace, expr *AST.Common, symbols *[]ST.Symbol) {
+	if expr == nil {
+		return
+	}
+
+	switch expr.NodeType {
+	case "Identifier":
+		*symbols = append(*symbols, ST.Symbol{
+			Namespace:  namespace,
+			Identifier: expr.ASTNode.(*AST.Identifier).Name,
+			Type:       ST.Function,
+		})
+		return
+	case "MemberAccess":
+		*symbols = append(*symbols, ST.Symbol{
+			Namespace:  namespace,
+			Identifier: expr.ASTNode.(*AST.MemberAccess).MemberName,
+			Type:       ST.Function,
+		})
+		extractFuncSymbols(namespace, expr.ASTNode.(*AST.MemberAccess).Expression, symbols)
+	case "FunctionCall":
+		extractFuncSymbols(namespace, expr.ASTNode.(*AST.FunctionCall).Expression, symbols)
+	default:
+		logger.Warning.Println("Unhandle FunctionCall internal expression type:", expr.NodeType)
+	}
+}
+
 // recrusively extract symbols from the given expression
 func extractSymbolsFromExpression(expr *AST.Common, symbols *[]ST.Symbol) {
 	if expr == nil {

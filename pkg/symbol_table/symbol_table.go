@@ -15,6 +15,7 @@ type Symbol struct {
 	Type           SymbolType
 	Identifier     string
 	IsFunctionCall bool
+	FunctionCalls  []string
 	Arributes      map[string]interface{}
 }
 

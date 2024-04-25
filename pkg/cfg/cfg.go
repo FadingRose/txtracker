@@ -53,6 +53,7 @@ func (cfg *CFG) _findEntryFunc(contractDef *AST.Common) []*Function {
 					continue
 				}
 				cfg.Visitor.EnterNamespace(funcDef.Name)
+				// BREAKPOINT usage:: funcDef.Name = "configurationCrowdsale"
 				entryFuncs = append(entryFuncs, &Function{
 					Name:       contractName + "::" + funcDef.Name,
 					Block:      cfg._constructFuncLevelBlock(funcDef),
