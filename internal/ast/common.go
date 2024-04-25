@@ -1,6 +1,6 @@
 package ast
 
-import "txtracker/pkg/logger"
+import "txtracker/internal/logger"
 
 type ASTNode interface {
 	Attributes() *map[string]interface{}

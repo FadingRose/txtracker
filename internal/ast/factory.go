@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"txtracker/pkg/logger"
+	"txtracker/internal/logger"
 )
 
 func NodeFactory(data map[string]interface{}) *Common {

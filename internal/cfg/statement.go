@@ -2,8 +2,8 @@ package cfg
 
 import (
 	"strings"
-	AST "txtracker/pkg/ast"
-	"txtracker/pkg/logger"
+	AST "txtracker/internal/ast"
+	"txtracker/internal/logger"
 )
 
 func (cfg *CFG) _constructStatement(stmt *AST.Common) *Statement {

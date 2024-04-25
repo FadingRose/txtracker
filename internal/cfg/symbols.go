@@ -2,9 +2,9 @@ package cfg
 
 import (
 	"strings"
-	AST "txtracker/pkg/ast"
-	"txtracker/pkg/logger"
-	ST "txtracker/pkg/symbol_table"
+	AST "txtracker/internal/ast"
+	"txtracker/internal/logger"
+	ST "txtracker/internal/symbol_table"
 )
 
 // returns the symbols that are modified and depends on the given variable declaration statement

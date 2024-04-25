@@ -2,8 +2,8 @@ package symboltable
 
 import (
 	"strings"
-	"txtracker/pkg/ast"
-	"txtracker/pkg/logger"
+	"txtracker/internal/ast"
+	"txtracker/internal/logger"
 )
 
 type GlobalSymbolTable struct {

@@ -1,9 +1,9 @@
 package cfg
 
 import (
-	AST "txtracker/pkg/ast"
-	"txtracker/pkg/logger"
-	ST "txtracker/pkg/symbol_table"
+	AST "txtracker/internal/ast"
+	"txtracker/internal/logger"
+	ST "txtracker/internal/symbol_table"
 )
 
 type StatementType int

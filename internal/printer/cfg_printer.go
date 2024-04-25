@@ -2,7 +2,7 @@ package printer
 
 import (
 	"fmt"
-	CFG "txtracker/pkg/cfg"
+	CFG "txtracker/internal/cfg"
 )
 
 type CFGPrinter struct {

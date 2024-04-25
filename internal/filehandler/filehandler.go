@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"txtracker/pkg/common/models"
-	"txtracker/pkg/logger"
+	"txtracker/internal/common/models"
+	"txtracker/internal/logger"
 )
 
 // filehandler.go:

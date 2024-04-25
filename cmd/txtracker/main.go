@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
-	CFG "txtracker/pkg/cfg"
-	"txtracker/pkg/compiler"
-	"txtracker/pkg/filehandler"
-	"txtracker/pkg/logger"
-	"txtracker/pkg/parser"
-	"txtracker/pkg/printer"
-	symboltable "txtracker/pkg/symbol_table"
+	CFG "txtracker/internal/cfg"
+	"txtracker/internal/compiler"
+	"txtracker/internal/filehandler"
+	"txtracker/internal/logger"
+	"txtracker/internal/parser"
+	"txtracker/internal/printer"
+	symboltable "txtracker/internal/symbol_table"
 )
 
 func main() {
@@ -19,7 +19,6 @@ func main() {
 		SPECIFIC_CONTRACT = os.Args[1]
 	} else {
 		SPECIFIC_CONTRACT = ""
-
 	}
 
 	filehandler, err := filehandler.NewFileHandler("../../dataset/contracts", SPECIFIC_CONTRACT)

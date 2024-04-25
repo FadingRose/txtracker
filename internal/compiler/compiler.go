@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"txtracker/pkg/logger"
+	"txtracker/internal/logger"
 )
 
 // Compiler is an interface that defines the methods that a compiler must implement.

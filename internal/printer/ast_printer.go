@@ -3,7 +3,7 @@ package printer
 import (
 	"fmt"
 	"strings"
-	"txtracker/pkg/ast"
+	"txtracker/internal/ast"
 )
 
 type Printer struct {
