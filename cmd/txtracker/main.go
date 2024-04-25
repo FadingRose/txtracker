@@ -15,11 +15,13 @@ import (
 func main() {
 
 	var SPECIFIC_CONTRACT string
-	if len(os.Args) >= 2 {
-		SPECIFIC_CONTRACT = os.Args[1]
-	} else {
-		SPECIFIC_CONTRACT = ""
-	}
+	var PRINTER PrinterType
+	SPECIFIC_CONTRACT, PRINTER = cmd(os.Args)
+	// if len(os.Args) >= 2 {
+	// 	SPECIFIC_CONTRACT = os.Args[1]
+	// } else {
+	// 	SPECIFIC_CONTRACT = ""
+	// }
 
 	filehandler, err := filehandler.NewFileHandler("../../dataset/contracts", SPECIFIC_CONTRACT)
 	if err != nil {
@@ -44,6 +46,7 @@ func main() {
 
 		cfg_printer := printer.NewCFGPrinter(cfg)
 		cfg_printer.Print()
+
 	}
 
 }
