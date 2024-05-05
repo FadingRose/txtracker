@@ -2,4 +2,4 @@ build/bin/txtracker
 /logs/
 venv/
 *.code-workspace
-dataset/
+dataset/dirty-tmp/
