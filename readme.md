@@ -2,6 +2,23 @@
 
 > This is a early version of the TxTracker, a tool for static check of Solidity.
 
+## Platform
+
+This project is fully supported on Linux and MacOS. Windows is not supported.
+
+## Dependencies
+
+- [solc-select](https://github.com/crytic/solc-select)
+
+You should change the global version of Solidity to <YOUR_CONTRACT_VERSION> by running the following command:
+
+```bash
+solc-select install 0.5.17 # Assume you want to use Solidity 0.5.17
+solc-select use 0.5.17
+```
+
+The TxTrancker will use the Solidity version you set and do NOT alter it automatically.
+
 ## For Developers
 
 Please clone the repository and run the following commands:
