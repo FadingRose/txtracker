@@ -45,8 +45,33 @@ func main() {
 		cfg := CFG.NewCFG(root, symbol_table)
 
 		cfg_printer := printer.NewCFGPrinter(cfg)
-		cfg_printer.Print()
+
+		switch PRINTER {
+		case CFG_PRINTER:
+			cfg_printer.Print()
+		}
 
 	}
 
+}
+
+type PrinterType string
+
+const (
+	CFG_PRINTER       PrinterType = "cfg"
+	CALLGRAPH_PRINTER PrinterType = "callgraph"
+)
+
+type SPECIFIC_CONTRACT = string
+
+func cmd(args []string) (SPECIFIC_CONTRACT, PrinterType) {
+	var SPECIFIC_CONTRACT string
+	var PRINTER PrinterType
+	SPECIFIC_CONTRACT, PRINTER = "", CFG_PRINTER
+	if len(args) >= 2 {
+		SPECIFIC_CONTRACT = args[1]
+	} else {
+		SPECIFIC_CONTRACT = ""
+	}
+	return SPECIFIC_CONTRACT, PRINTER
 }

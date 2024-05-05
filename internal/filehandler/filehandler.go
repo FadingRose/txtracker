@@ -12,9 +12,6 @@ import (
 // filehandler.go:
 // 1. read smart contract file from dataset/contracts
 
-type SolidityCode string
-type EVMCode string
-
 type FileHandler interface {
 	GetContractList() ([]string, error)
 	GetContractSolPathList() []string
@@ -59,22 +56,13 @@ func (s *SolidityFileHandler) loadContracts() {
 			if !info.IsDir() {
 				fileName, fileExtension := filepath.Base(path), filepath.Ext(path)
 
-				switch fileExtension {
-				case ".sol":
-					solCode = readThenDumpFileContent(path)
-				case ".evm":
-					evmCode = readThenDumpFileContent(path)
-				default:
-					logger.Warning.Println("Unknown file extension:", fileExtension)
+				if fileExtension == ".sol" {
+					s.contracts = append(s.contracts,
+						models.Contract{
+							ContractName: strings.Split(fileName, ".")[0],
+						},
+					)
 				}
-
-				s.contracts = append(s.contracts,
-					models.Contract{
-						ContractName: strings.Split(fileName, ".")[0],
-						SolidityCode: models.SolidityCode{SourceCode: solCode},
-						EVMCode:      models.EVMCode{ByteCode: evmCode},
-					},
-				)
 			}
 			return nil
 		})

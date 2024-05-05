@@ -145,6 +145,8 @@ func StatementToString(s *Statement) string {
 		return functionCallToString(s)
 	case Require:
 		return requireToString(s)
+	case If:
+		return ifToString(s)
 	}
 	logger.Warning.Println("Unhandled statement to string:", s.Type)
 	return ""
@@ -188,6 +190,10 @@ func functionCallToString(s *Statement) string {
 }
 
 func requireToString(s *Statement) string {
+	return printDepends(s.Depends)
+}
+
+func ifToString(s *Statement) string {
 	return printDepends(s.Depends)
 }
 

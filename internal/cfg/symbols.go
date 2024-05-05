@@ -19,6 +19,7 @@ func (cfg *CFG) _getModifyAndDependsSymbols(stmt *AST.Common, _type StatementTyp
 		Assert:              &AssertHandler{},
 		Require:             &RequireHandler{},
 		FunctionCall:        &FunctionCallHandler{},
+		If:                  &IfHandler{},
 	}
 	if handler, ok := handlers[_type]; ok {
 		handler.GetSymbols(*cfg.Visitor.CurrentNamespace, stmt, &modify, &depends, &declare)
@@ -128,6 +129,14 @@ func (h *FunctionCallHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Commo
 		extractFuncSymbols(namespace, funcRef, declare)
 	}
 
+}
+
+type IfHandler struct {
+}
+
+func (h *IfHandler) GetSymbols(namespace ST.Namespace, stmt *AST.Common, modify, depends, declare *[]ST.Symbol) {
+	condition := stmt.ASTNode.(*AST.IfStatement).Condition
+	extractSymbolsFromExpression(condition, depends)
 }
 
 // helper function:
